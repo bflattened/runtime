@@ -16,6 +16,7 @@ namespace System.Runtime.Serialization
         // If this token owned the DeserializationTracker, turn off DeserializationInProgress tracking
         public void Dispose()
         {
+#if false
             if (_tracker != null && _tracker.DeserializationInProgress)
             {
                 lock (_tracker)
@@ -27,6 +28,7 @@ namespace System.Runtime.Serialization
                     }
                 }
             }
+#endif
         }
     }
 }

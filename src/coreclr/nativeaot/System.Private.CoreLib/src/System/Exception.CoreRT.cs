@@ -140,7 +140,7 @@ namespace System
                     ex.AppendStackIP(IP, isFirstRethrowFrame);
 
                 // UNIX-TODO: RhpEtwExceptionThrown
-#if TARGET_WINDOWS
+#if false
                 if (isFirstFrame)
                 {
                     string typeName = !fatalOutOfMemory  ? ex.GetType().ToString() : "System.OutOfMemoryException";

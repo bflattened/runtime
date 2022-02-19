@@ -36,14 +36,14 @@ BROTLI_INTERNAL extern const double kBrotliLog2Table[BROTLI_LOG2_TABLE_SIZE];
 
 /* Visual Studio 2012 and Android API levels < 18 do not have the log2()
  * function defined, so we use log() and a multiplication instead. */
-#if !defined(BROTLI_HAVE_LOG2)
-#if ((defined(_MSC_VER) && _MSC_VER <= 1700) || \
-     (defined(__ANDROID_API__) && __ANDROID_API__ < 18))
+//#if !defined(BROTLI_HAVE_LOG2)
+//#if ((defined(_MSC_VER) && _MSC_VER <= 1700) || \
+//     (defined(__ANDROID_API__) && __ANDROID_API__ < 18))
 #define BROTLI_HAVE_LOG2 0
-#else
-#define BROTLI_HAVE_LOG2 1
-#endif
-#endif
+//#else
+//#define BROTLI_HAVE_LOG2 1
+//#endif
+//#endif
 
 #define LOG_2_INV 1.4426950408889634
 

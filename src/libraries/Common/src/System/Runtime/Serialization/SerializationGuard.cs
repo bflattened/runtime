@@ -10,6 +10,11 @@ namespace System.Runtime.Serialization
     /// </summary>
     internal static partial class SerializationGuard
     {
+        public static void ThrowIfDeserializationInProgress(string switchSuffix, ref int cachedValue)
+        {
+        }
+
+#if false
         private delegate void ThrowIfDeserializationInProgressWithSwitchDel(string switchName, ref int cachedValue);
         private static readonly ThrowIfDeserializationInProgressWithSwitchDel? s_throwIfDeserializationInProgressWithSwitch = CreateThrowIfDeserializationInProgressWithSwitchDelegate();
 
@@ -39,5 +44,6 @@ namespace System.Runtime.Serialization
         {
             s_throwIfDeserializationInProgressWithSwitch?.Invoke(switchSuffix, ref cachedValue);
         }
+#endif
     }
 }

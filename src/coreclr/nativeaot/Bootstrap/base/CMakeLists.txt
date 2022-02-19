@@ -2,6 +2,7 @@ project(bootstrapper)
 
 set(SOURCES
     ../main.cpp
+    nocrt.cpp
 )
 
 add_library(bootstrapper STATIC ${SOURCES})

@@ -1461,6 +1461,11 @@ MethodTable* GCToEEInterface::GetFreeObjectMethodTable()
     return (MethodTable*)g_pFreeObjectEEType;
 }
 
+// This is arbitrary, we shouldn't ever be having config keys
+// longer than these lengths.
+// CoreCLR has the same limit and comment.
+const size_t MaxConfigKeyLength = 255;
+
 bool GCToEEInterface::GetBooleanConfigValue(const char* privateKey, const char* publicKey, bool* value)
 {
     // these configuration values are given to us via startup flags.
@@ -1478,7 +1483,7 @@ bool GCToEEInterface::GetBooleanConfigValue(const char* privateKey, const char* 
 
 #ifdef UNICODE
     size_t keyLength = strlen(privateKey) + 1;
-    TCHAR* pKey = (TCHAR*)_alloca(sizeof(TCHAR) * keyLength);
+    TCHAR pKey[MaxConfigKeyLength];
     for (size_t i = 0; i < keyLength; i++)
         pKey[i] = privateKey[i];
 #else
@@ -1497,7 +1502,7 @@ bool GCToEEInterface::GetIntConfigValue(const char* privateKey, const char* publ
 {
 #ifdef UNICODE
     size_t keyLength = strlen(privateKey) + 1;
-    TCHAR* pKey = (TCHAR*)_alloca(sizeof(TCHAR) * keyLength);
+    TCHAR pKey[MaxConfigKeyLength];
     for (size_t i = 0; i < keyLength; i++)
         pKey[i] = privateKey[i];
 #else

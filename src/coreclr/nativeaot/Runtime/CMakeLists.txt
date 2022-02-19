@@ -1,6 +1,7 @@
 set(GC_DIR ../../gc)
 
 set(COMMON_RUNTIME_SOURCES
+    nocrt.cpp
     allocheap.cpp
     rhassert.cpp
     CachedInterfaceDispatch.cpp
@@ -120,8 +121,8 @@ if(WIN32)
     windows/PalRedhawkCommon.cpp
     windows/PalRedhawkMinWin.cpp
     ${GC_DIR}/windows/gcenv.windows.cpp
-    eventtrace.cpp
-    rheventtrace.cpp
+    #eventtrace.cpp
+    #rheventtrace.cpp
   )
 
   list(APPEND FULL_RUNTIME_SOURCES
@@ -195,19 +196,19 @@ else()
   )
 endif()
 
-if (CLR_CMAKE_TARGET_ARCH_AMD64 AND CLR_CMAKE_TARGET_WIN32)
-  list(APPEND COMMON_RUNTIME_SOURCES
-    ${GC_DIR}/vxsort/isa_detection.cpp
-    ${GC_DIR}/vxsort/do_vxsort_avx2.cpp
-    ${GC_DIR}/vxsort/do_vxsort_avx512.cpp
-    ${GC_DIR}/vxsort/machine_traits.avx2.cpp
-    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX2.int64_t.generated.cpp
-    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX2.int32_t.generated.cpp
-    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX512.int64_t.generated.cpp
-    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX512.int32_t.generated.cpp
-    ${GC_DIR}/vxsort/smallsort/avx2_load_mask_tables.cpp
-)
-endif (CLR_CMAKE_TARGET_ARCH_AMD64 AND CLR_CMAKE_TARGET_WIN32)
+#if (CLR_CMAKE_TARGET_ARCH_AMD64 AND CLR_CMAKE_TARGET_WIN32)
+#  list(APPEND COMMON_RUNTIME_SOURCES
+#    ${GC_DIR}/vxsort/isa_detection.cpp
+#    ${GC_DIR}/vxsort/do_vxsort_avx2.cpp
+#    ${GC_DIR}/vxsort/do_vxsort_avx512.cpp
+#    ${GC_DIR}/vxsort/machine_traits.avx2.cpp
+#    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX2.int64_t.generated.cpp
+#    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX2.int32_t.generated.cpp
+#    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX512.int64_t.generated.cpp
+#    ${GC_DIR}/vxsort/smallsort/bitonic_sort.AVX512.int32_t.generated.cpp
+#    ${GC_DIR}/vxsort/smallsort/avx2_load_mask_tables.cpp
+#)
+#endif (CLR_CMAKE_TARGET_ARCH_AMD64 AND CLR_CMAKE_TARGET_WIN32)
 
 list(APPEND RUNTIME_SOURCES_ARCH_ASM
   ${ARCH_SOURCES_DIR}/AllocFast.${ASM_SUFFIX}
@@ -243,8 +244,8 @@ add_definitions(-D_LIB)
 # add_definitions(-DSTRESS_HEAP)
 
 if(WIN32)
-  add_definitions(-DFEATURE_ETW)
-  add_definitions(-DFEATURE_EVENT_TRACE)
+#  add_definitions(-DFEATURE_ETW)
+#  add_definitions(-DFEATURE_EVENT_TRACE)
 else()
   add_definitions(-DNO_UI_ASSERT)
   include(unix/configure.cmake)

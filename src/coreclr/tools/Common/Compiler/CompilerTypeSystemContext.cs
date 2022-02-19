@@ -259,6 +259,11 @@ namespace ILCompiler
             }
         }
 
+        protected void CacheOpenModule(string simpleName, string filePath, EcmaModule module, MemoryMappedViewAccessor accessor)
+        {
+            AddModule(null, null, true, new ModuleData() { SimpleName = simpleName, FilePath = filePath, Module = module, MappedViewAccessor = accessor });
+        }
+
         protected override RuntimeInterfacesAlgorithm GetRuntimeInterfacesAlgorithmForDefType(DefType type)
         {
             return _metadataRuntimeInterfacesAlgorithm;
