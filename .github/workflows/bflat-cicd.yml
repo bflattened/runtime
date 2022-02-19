@@ -47,7 +47,7 @@ jobs:
 
       - name: Package compiler
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
-        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/Linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/MichalStrehovsky/actions-playground
+        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/Linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/bflattened/runtime
 
       - name: Archive compiler package
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
@@ -160,7 +160,7 @@ jobs:
         uses: actions/download-artifact@v2
           
       - name: Publish compiler package
-        run: dotnet nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg -s https://nuget.pkg.github.com/MichalStrehovsky/index.json --api-key ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg -s https://nuget.pkg.github.com/bflattened/index.json --api-key ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         id: create_release
