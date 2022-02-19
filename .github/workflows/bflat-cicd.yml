@@ -35,31 +35,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Build the product
+      - name: Build the product (Linux)
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }}
 #        run: ./build.sh clr.alljits+clr.tools -c Release -arch ${{ matrix.arch }}
         if: ${{ matrix.vm == 'ubuntu-latest' }}
-      - name: Build the product
+      - name: Build the product (Windows)
         shell: cmd
         run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }}
 #        run: build.cmd clr.alljits+clr.tools -c Release -arch ${{ matrix.arch }}
         if: ${{ matrix.vm == 'windows-latest' }}
-
-#      - name: Build tests
-#        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot'
-#        if: ${{ matrix.vm == 'ubuntu-latest' }}
-#      - name: Build tests
-#        shell: cmd
-#        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot
-#        if: ${{ matrix.vm == 'windows-latest' }}
-
-#      - name: Run tests
-#        run: ./src/tests/run.sh --runnativeaottests release ${{ matrix.arch }}
-#        if: ${{ matrix.vm == 'ubuntu-latest' }}
-#      - name: Run tests
-#        shell: cmd
-#        run: src\tests\run.cmd runnativeaottests release ${{ matrix.arch }}
-#        if: ${{ matrix.vm == 'windows-latest' }}
 
       - name: Package compiler
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
@@ -72,14 +56,14 @@ jobs:
           name: nuget
           path: bflat/pack/bin/Debug/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg
 
-      - name: ZIP native compiler
+      - name: ZIP native compiler (Linux)
         run: |
           mkdir artifacts/bflat-compiler-native
           cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
           cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
           zip -jr artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
         if: ${{ matrix.vm == 'ubuntu-latest' }}
-      - name: ZIP native compiler
+      - name: ZIP native compiler (Windows)
         run: |
           mkdir artifacts\bflat-compiler-native
           copy artifacts\bin\coreclr\Windows.${{ matrix.arch }}.Release\ilc\clrjit_* artifacts\bflat-compiler-native\
@@ -98,7 +82,7 @@ jobs:
           name: native-compiler
           path: artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
 
-      - name: ZIP libs
+      - name: ZIP libs (Linux)
         run: |
           mkdir artifacts/bflat-libs
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/lib/net7.0/*
@@ -106,7 +90,7 @@ jobs:
           cp -t artifacts/bflat-libs artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/aotsdk/*
           zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
         if: ${{ matrix.vm == 'ubuntu-latest' }}
-      - name: ZIP libs
+      - name: ZIP libs (Windows)
         run: |
           mkdir artifacts\bflat-libs
           copy artifacts\bin\microsoft.netcore.app.runtime.win-${{ matrix.arch }}\Release\runtimes\win-${{ matrix.arch }}\lib\net7.0\* artifacts\bflat-libs\
@@ -136,6 +120,22 @@ jobs:
         with:
           name: refs
           path: artifacts/bflat-refs.zip
+          
+      - name: Build tests (Linux)
+        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot'
+        if: ${{ matrix.vm == 'ubuntu-latest' && github.event.inputs.version == '' }}
+      - name: Build tests (Windows)
+        shell: cmd
+        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot
+        if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' }}
+
+      - name: Run tests (Linux)
+        run: ./src/tests/run.sh --runnativeaottests release ${{ matrix.arch }}
+        if: ${{ matrix.vm == 'ubuntu-latest' && github.event.inputs.version == '' }}
+      - name: Run tests (Windows)
+        shell: cmd
+        run: src\tests\run.cmd runnativeaottests release ${{ matrix.arch }}
+        if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' }}
           
   publish:
     needs: build_and_test
