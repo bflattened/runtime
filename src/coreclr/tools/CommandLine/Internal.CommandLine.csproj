@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputPath>$(RuntimeBinDir)ilc/</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Common\CommandLine\Argument.cs" />
+    <Compile Include="..\Common\CommandLine\Argument_1.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentCommand.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentCommand_1.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentLexer.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentList_1.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentParser.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentSyntax.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentSyntax_Definers.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentSyntaxException.cs" />
+    <Compile Include="..\Common\CommandLine\ArgumentToken.cs" />
+    <Compile Include="..\Common\CommandLine\CommandLineException.cs" />
+    <Compile Include="..\Common\CommandLine\CommandLineHelpers.cs" />
+    <Compile Include="..\Common\CommandLine\Enumerable.cs" />
+    <Compile Include="..\Common\CommandLine\HelpTextGenerator.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\Common\CommandLine\Resources\Strings.resx">
+      <GenerateSource>true</GenerateSource>
+      <ClassName>Internal.CommandLine.Strings</ClassName>
+      <LogicalName>Internal.CommandLine.Strings.resources</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>
