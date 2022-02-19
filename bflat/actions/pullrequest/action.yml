@@ -1,0 +1,15 @@
+name: 'Create pull request'
+description: 'Creates a pull request'
+inputs:
+  pr_title:
+    description: 'Title of the PR.'
+  source_branch:
+    description: 'Source branch.'
+  target_branch:
+    description: 'Target branch.'
+  auth_token:
+    description: 'The token used to authenticate to GitHub.'
+
+runs:
+  using: 'node12'
+  main: 'index.js'

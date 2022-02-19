@@ -1,0 +1,45 @@
+name: Sync from dotnet/runtime repo
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Configure git
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git remote add dotnet https://github.com/dotnet/runtime.git
+    - name: Create branch
+      run: git checkout -b merge-main
+    - name: Merge from dotnet
+      run: git pull --ff dotnet main
+    - name: Move any unrelated files under .github
+      run: |
+        rsync -rv --include '*/' --exclude 'workflows/bflat*' --remove-source-files .github/ .gh-original/
+        git add \*
+        git diff-index --quiet HEAD || something_moved=$?
+        if [ -n "$something_moved" ]
+        then
+          echo Got new files we need to move
+          git commit -m "Move added files"
+        fi
+    - name: Check if branch already exists
+      continue-on-error: true
+      id: branch_exists
+      run: git ls-remote --exit-code --heads origin merge-main
+    - name: Push
+      run: git push --force --set-upstream origin HEAD:merge-main
+    - name: Create pull request
+      if: steps.branch_exists.outcome != 'success'
+      uses: ./bflat/actions/pullrequest
+      with:
+        auth_token: ${{ secrets.GITHUB_TOKEN }}
+        source_branch: merge-main
+        target_branch: bflat-main
+        pr_title: Merge from dotnet/runtime
