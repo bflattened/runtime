@@ -113,6 +113,23 @@ else ()
     )
 
     if(STATIC_LIBS_ONLY)
+        # CFG runtime checks in C++ code are unnecessary overhead unless Native AOT compiler produces CFG compliant code as well
+        # and CFG is enabled in the linker
+        if(CMAKE_CXX_FLAGS MATCHES "/guard:cf")
+          string(REPLACE "/guard:cf" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+        endif()
+        if(CMAKE_C_FLAGS MATCHES "/guard:cf")
+          string(REPLACE "/guard:cf" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+        endif()
+        add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Zl>)
+        if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/RTC1")
+          string(REPLACE "/RTC1" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+        endif()
+        add_compile_options(/Gs10000000)  # avoid __chkstk
+        add_compile_options(/EHa-)
+        add_compile_options(/GS-)
+        add_compile_options(/Zl)
+
         add_library(System.IO.Compression.Native.Aot
             STATIC
             ${NATIVECOMPRESSION_SOURCES}
@@ -120,11 +137,11 @@ else ()
         target_compile_options(System.IO.Compression.Native.Aot PRIVATE /guard:cf-)
         target_compile_options(System.IO.Compression.Native.Aot PRIVATE /GL-)
 
-        add_library(System.IO.Compression.Native.Aot.GuardCF
-            STATIC
-            ${NATIVECOMPRESSION_SOURCES}
-        )
-        target_compile_options(System.IO.Compression.Native.Aot.GuardCF PRIVATE /GL-)
+#        add_library(System.IO.Compression.Native.Aot.GuardCF
+#            STATIC
+#            ${NATIVECOMPRESSION_SOURCES}
+#        )
+#        target_compile_options(System.IO.Compression.Native.Aot.GuardCF PRIVATE /GL-)
     endif()
 
     # Allow specification of libraries that should be linked against
@@ -135,7 +152,7 @@ else ()
 
     if(STATIC_LIBS_ONLY)
         target_link_libraries(System.IO.Compression.Native.Aot ${__LinkLibraries})
-        target_link_libraries(System.IO.Compression.Native.Aot.GuardCF ${__LinkLibraries})
+#        target_link_libraries(System.IO.Compression.Native.Aot.GuardCF ${__LinkLibraries})
     endif()
 
     if (GEN_SHARED_LIB)
@@ -152,7 +169,7 @@ else ()
 
     if(STATIC_LIBS_ONLY)
         install_static_library(System.IO.Compression.Native.Aot aotsdk nativeaot)
-        install_static_library(System.IO.Compression.Native.Aot.GuardCF aotsdk nativeaot)
+#        install_static_library(System.IO.Compression.Native.Aot.GuardCF aotsdk nativeaot)
     endif()
 
 endif ()
