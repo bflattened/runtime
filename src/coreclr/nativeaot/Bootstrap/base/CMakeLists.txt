@@ -9,8 +9,8 @@ add_library(bootstrapper STATIC ${SOURCES})
 
 install_static_library(bootstrapper aotsdk nativeaot)
 
-if (CLR_CMAKE_TARGET_WIN32)
-  add_library(bootstrapper.GuardCF STATIC ${SOURCES})
-  install_static_library(bootstrapper.GuardCF aotsdk nativeaot)
-  target_compile_options(bootstrapper.GuardCF PRIVATE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/guard:cf>)
-endif()
+#if (CLR_CMAKE_TARGET_WIN32)
+#  add_library(bootstrapper.GuardCF STATIC ${SOURCES})
+#  install_static_library(bootstrapper.GuardCF aotsdk nativeaot)
+#  target_compile_options(bootstrapper.GuardCF PRIVATE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/guard:cf>)
+#endif()
