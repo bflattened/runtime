@@ -385,7 +385,7 @@ extern "C" bool RhInitialize()
         return false;
 
     // Populate the values needed for debugging
-    PopulateDebugHeaders();
+    //PopulateDebugHeaders();
 
     return true;
 }
