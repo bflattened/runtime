@@ -19,6 +19,10 @@
       <Pack>true</Pack>
       <PackagePath>lib\$(TargetFramework)</PackagePath>
     </Content>
+    <Content Include="$(IntermediateOutputPath)Microsoft.DiaSymReader.dll">
+      <Pack>true</Pack>
+      <PackagePath>lib\$(TargetFramework)</PackagePath>
+    </Content>
   </ItemGroup>
 
   <Target Name="CreateManifestResourceNames" />
