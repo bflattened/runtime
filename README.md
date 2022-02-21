@@ -1,3 +1,12 @@
+# bflat Runtime and AOT Compiler
+
+This repo is a fork of the [dotnet/runtime](https://github.com/dotnet/runtime) repo with customizations for the [bflattened/bflat](https://github.com/bflattened/bflat) project. The repo is mostly run by bots that pick up latest changes from the dotnet/runtime repo and generate build artifacts for consumption in the bflat repo.
+
+Upstreaming changes to dotnet/runtime is strongly preferred to making changes in this repo.
+
+<details>
+<summary>Click this to see the original repo README.md</summary>
+
 # .NET Runtime
 [![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/runtime/runtime?branchName=main)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=686&branchName=main)
 [![Help Wanted](https://img.shields.io/github/issues/dotnet/runtime/up-for-grabs?style=flat-square&color=%232EA043&label=help%20wanted)](https://github.com/dotnet/runtime/issues?q=is%3Aissue+is%3Aopen+label%3A%22up-for-grabs%22)
@@ -67,3 +76,4 @@ General .NET OSS discussions: [.NET Foundation Discussions](https://github.com/d
 ## License
 
 .NET (including the runtime repo) is licensed under the [MIT](LICENSE.TXT) license.
+</details>
