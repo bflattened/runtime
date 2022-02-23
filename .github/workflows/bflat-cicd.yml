@@ -141,7 +141,7 @@ jobs:
     needs: build_and_test
     runs-on: ubuntu-latest
     name: Publish release and NuGet
-    if: ${{ github.event.inputs.version != '' }}
+    if: ${{ github.event.inputs.version != '' && github.actor == 'MichalStrehovsky' }}
     steps:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v1
