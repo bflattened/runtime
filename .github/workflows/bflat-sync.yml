@@ -4,6 +4,7 @@ on:
 
 jobs:
   sync:
+    if: ${{ github.actor == 'MichalStrehovsky' }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
