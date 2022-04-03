@@ -447,6 +447,7 @@ $(IlasmRoundTripBatchScript)
 
 REM Allow precommands to override the ExePath
 set ExePath=$(InputAssemblyName)
+set TestExclusionListPath=%CORE_ROOT%\TestExclusionList.txt
 
 REM Precommands
 $(CLRTestBatchPreCommands)
