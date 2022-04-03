@@ -44,6 +44,8 @@ class Generics
         TestGenericRecursionFromNpgsql.Run();
         TestRecursionInGenericVirtualMethods.Run();
         TestRecursionThroughGenericLookups.Run();
+        TestGvmLookupDependency.Run();
+        TestInvokeMemberCornerCaseInGenerics.Run();
 #if !CODEGEN_CPP
         TestNullableCasting.Run();
         TestVariantCasting.Run();
@@ -3145,6 +3147,48 @@ class Generics
             // There is a generic recursion in the above hierarchy. This just tests that we can compile.
             new ArrayHandler<object>().Write(null);
             new RangeHandler<object>().Write(default);
+        }
+    }
+
+    static class TestGvmLookupDependency
+    {
+        struct SmallCat<T> { }
+
+        interface ITechnique
+        {
+            void CatSlaps<T>() { /* Cannot reference T or it stops testing the thing it should */ }
+        }
+
+        struct Technique : ITechnique { }
+
+        static void CatConcepts<T, U>() where T : ITechnique => default(T).CatSlaps<SmallCat<U>>();
+
+        public static void Run()
+        {
+            CatConcepts<Technique, int>();
+            CatConcepts<Technique, object>();
+        }
+    }
+
+    class TestInvokeMemberCornerCaseInGenerics
+    {
+        class Generic<T>
+        {
+            public void Method(params T[] ts) { }
+        }
+
+        class Atom { }
+
+        static Generic<Atom> s_instance = new Generic<Atom>();
+        static Type s_atomType = typeof(Atom);
+
+        public static void Run()
+        {
+            s_instance.Method(null);
+
+            // Regression test for https://github.com/dotnet/runtime/issues/65612
+            // This requires MethodTable for "Atom[]" - just make sure the compiler didn't crash and we can invoke
+            typeof(Generic<>).MakeGenericType(s_atomType).InvokeMember("Method", BindingFlags.Public | BindingFlags.InvokeMethod | BindingFlags.Instance, null, s_instance, new object[] { new Atom() });
         }
     }
 }
