@@ -13,8 +13,6 @@ namespace System.Text.RegularExpressions.Tests
 {
     public class RegexIgnoreCaseTests
     {
-        public static bool IsIcuGlobalization = PlatformDetection.IsIcuGlobalization;
-
         public static IEnumerable<(string, string)> CharactersWithSameLowercase()
         {
             return new (string, string)[]
@@ -59,11 +57,6 @@ namespace System.Text.RegularExpressions.Tests
                 if (PlatformDetection.IsBrowser && culture != "")
                     continue;
 
-                // NLS globalization uses different mappings for invariant culture for some characters so we skip that for now.
-                // https://github.com/dotnet/runtime/issues/67624
-                if (PlatformDetection.IsNlsGlobalization && culture == "")
-                    continue;
-
                 foreach ((string firstChar, string secondChar) in CharactersWithSameLowercase())
                 {
                     if (culture != "en-us" && firstChar == "\u0130" && secondChar == "\u0049") // This mapping doesn't exist in invariant or turkish cultures.
@@ -84,8 +77,7 @@ namespace System.Text.RegularExpressions.Tests
         [MemberData(nameof(Characters_With_Common_Lowercase_Match_Data))]
         public async Task Characters_With_Common_Lowercase_Match(RegexEngine engine, string pattern, string input, string culture)
         {
-            using var _ = new ThreadCultureChange(culture);
-            Regex regex = await RegexHelpers.GetRegexAsync(engine, pattern, RegexOptions.IgnoreCase);
+            Regex regex = await RegexHelpers.GetRegexAsync(engine, pattern, RegexOptions.IgnoreCase, CultureInfo.GetCultureInfo(culture));
             Assert.True(regex.IsMatch(input));
         }
 
@@ -160,8 +152,8 @@ namespace System.Text.RegularExpressions.Tests
         // This test takes a long time to run since it needs to compute all possible lowercase mappings across
         // 3 different cultures and then creates Regex matches for all of our engines for each mapping.
         [OuterLoop]
-        // Disabling test in NLS-globalization systems due to https://github.com/dotnet/runtime/issues/67624
-        [ConditionalTheory(nameof(IsIcuGlobalization))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/67793")]
+        [Theory]
         [MemberData(nameof(Unicode_IgnoreCase_TestData))]
         public async Task Unicode_IgnoreCase_Tests(RegexEngine engine, string culture, RegexOptions options)
         {

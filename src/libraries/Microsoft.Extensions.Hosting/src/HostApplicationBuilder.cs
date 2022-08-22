@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,7 @@ namespace Microsoft.Extensions.Hosting
         ///     <item><description>enables scope validation on the dependency injection container when <see cref="IHostEnvironment.EnvironmentName"/> is 'Development'</description></item>
         ///   </list>
         /// </remarks>
+        [RequiresDynamicCode(Host.RequiresDynamicCodeMessage)]
         public HostApplicationBuilder()
             : this(args: null)
         {
@@ -68,6 +70,7 @@ namespace Microsoft.Extensions.Hosting
         ///   </list>
         /// </remarks>
         /// <param name="args">The command line args.</param>
+        [RequiresDynamicCode(Host.RequiresDynamicCodeMessage)]
         public HostApplicationBuilder(string[]? args)
             : this(new HostApplicationBuilderSettings { Args = args })
         {
@@ -77,6 +80,7 @@ namespace Microsoft.Extensions.Hosting
         /// Initializes a new instance of the <see cref="HostApplicationBuilder"/>.
         /// </summary>
         /// <param name="settings">Settings controlling initial configuration and whether default settings should be used.</param>
+        [RequiresDynamicCode(Host.RequiresDynamicCodeMessage)]
         public HostApplicationBuilder(HostApplicationBuilderSettings? settings)
         {
             settings ??= new HostApplicationBuilderSettings();
@@ -321,40 +325,50 @@ namespace Microsoft.Extensions.Hosting
 
             public IHostBuilder ConfigureHostConfiguration(Action<IConfigurationBuilder> configureDelegate)
             {
-                _configureHostConfigActions.Add(configureDelegate ?? throw new ArgumentNullException(nameof(configureDelegate)));
+                ThrowHelper.ThrowIfNull(configureDelegate);
+
+                _configureHostConfigActions.Add(configureDelegate);
                 return this;
             }
 
             public IHostBuilder ConfigureAppConfiguration(Action<HostBuilderContext, IConfigurationBuilder> configureDelegate)
             {
-                _configureAppConfigActions.Add(configureDelegate ?? throw new ArgumentNullException(nameof(configureDelegate)));
+                ThrowHelper.ThrowIfNull(configureDelegate);
+
+                _configureAppConfigActions.Add(configureDelegate);
                 return this;
             }
 
             public IHostBuilder ConfigureServices(Action<HostBuilderContext, IServiceCollection> configureDelegate)
             {
-                _configureServicesActions.Add(configureDelegate ?? throw new ArgumentNullException(nameof(configureDelegate)));
+                ThrowHelper.ThrowIfNull(configureDelegate);
+
+                _configureServicesActions.Add(configureDelegate);
                 return this;
             }
 
             public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory) where TContainerBuilder : notnull
             {
-                _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(factory ?? throw new ArgumentNullException(nameof(factory)));
+                ThrowHelper.ThrowIfNull(factory);
+
+                _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(factory);
                 return this;
 
             }
 
             public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(Func<HostBuilderContext, IServiceProviderFactory<TContainerBuilder>> factory) where TContainerBuilder : notnull
             {
-                _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(() => _hostApplicationBuilder._hostBuilderContext, factory ?? throw new ArgumentNullException(nameof(factory)));
+                ThrowHelper.ThrowIfNull(factory);
+
+                _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(() => _hostApplicationBuilder._hostBuilderContext, factory);
                 return this;
             }
 
             public IHostBuilder ConfigureContainer<TContainerBuilder>(Action<HostBuilderContext, TContainerBuilder> configureDelegate)
             {
-                _configureContainerActions.Add(new ConfigureContainerAdapter<TContainerBuilder>(configureDelegate
-                    ?? throw new ArgumentNullException(nameof(configureDelegate))));
+                ThrowHelper.ThrowIfNull(configureDelegate);
 
+                _configureContainerActions.Add(new ConfigureContainerAdapter<TContainerBuilder>(configureDelegate));
                 return this;
             }
         }

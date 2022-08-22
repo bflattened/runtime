@@ -1007,7 +1007,7 @@ extern "C" VOID STDCALL StubRareDisableTHROWWorker(Thread *pThread)
     // when we start executing here, we are actually in cooperative mode.  But we
     // haven't synchronized with the barrier to reentry yet.  So we are in a highly
     // dangerous mode.  If we call managed code, we will potentially be active in
-    // the GC heap, even as GC's are occuring!
+    // the GC heap, even as GC's are occurring!
 
     // We must do the following in this order, because otherwise we would be constructing
     // the exception for the abort without synchronizing with the GC.  Also, we have no
@@ -1157,7 +1157,7 @@ void UMEntryThunkCode::Encode(UMEntryThunkCode *pEntryThunkCodeRX, BYTE* pTarget
     m_jmp        = X86_INSTR_JMP_REL32;
     m_execstub   = (BYTE*) ((pTargetCode) - (4+((BYTE*)&pEntryThunkCodeRX->m_execstub)));
 
-    FlushInstructionCache(GetCurrentProcess(),pEntryThunkCodeRX->GetEntryPoint(),sizeof(UMEntryThunkCode));
+    ClrFlushInstructionCache(pEntryThunkCodeRX->GetEntryPoint(),sizeof(UMEntryThunkCode) - GetEntryPointOffset(), /* hasCodeExecutedBefore */ true);
 }
 
 void UMEntryThunkCode::Poison()
@@ -1172,7 +1172,7 @@ void UMEntryThunkCode::Poison()
     // mov ecx, imm32
     pThisRW->m_movEAX = 0xb9;
 
-    ClrFlushInstructionCache(GetEntryPoint(),sizeof(UMEntryThunkCode));
+    ClrFlushInstructionCache(GetEntryPoint(),sizeof(UMEntryThunkCode) - GetEntryPointOffset(), /* hasCodeExecutedBefore */ true);
 }
 
 UMEntryThunk* UMEntryThunk::Decode(LPVOID pCallback)
@@ -1235,7 +1235,7 @@ void DynamicHelpers::EmitHelperWithArg(BYTE*& p, size_t rxOffset, LoaderAllocato
     }
     CONTRACTL_END;
 
-    // Move an an argument into the second argument register and jump to a target function.
+    // Move an argument into the second argument register and jump to a target function.
 
     *p++ = 0xBA; // mov edx, XXXXXX
     *(INT32 *)p = (INT32)arg;

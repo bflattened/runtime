@@ -36,7 +36,7 @@ namespace System.Threading
                 LowLevelLock threadAdjustmentLock = threadPoolInstance._threadAdjustmentLock;
                 DelayHelper delayHelper = default;
 
-                if (BlockingConfig.IsCooperativeBlockingEnabled)
+                if (BlockingConfig.IsCooperativeBlockingEnabled && !BlockingConfig.IgnoreMemoryUsage)
                 {
                     // Initialize memory usage and limits, and register to update them on gen 2 GCs
                     threadPoolInstance.OnGen2GCCallback();
@@ -102,7 +102,7 @@ namespace System.Threading
                                 (uint)threadPoolInstance.GetAndResetHighWatermarkCountOfThreadsProcessingUserCallbacks());
                         }
 
-                        int cpuUtilization = cpuUtilizationReader.CurrentUtilization;
+                        int cpuUtilization = (int)cpuUtilizationReader.CurrentUtilization;
                         threadPoolInstance._cpuUtilization = cpuUtilization;
 
                         bool needGateThreadForRuntime = ThreadPool.PerformRuntimeSpecificGateActivities(cpuUtilization);

@@ -83,6 +83,10 @@
     </ProjectReference>
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(RequiresCodeFlowEnforcement)' == 'true'">
+    <CLRTestTargetUnsupported Condition="'$(UseCodeFlowEnforcement)' != 'true'">true</CLRTestTargetUnsupported>
+  </PropertyGroup>
+
   <!-- Determine if this project should be built or not -->
   <PropertyGroup>
     <BuildAllProjects Condition="'$(BuildAllProjects)' == ''">false</BuildAllProjects>
@@ -296,7 +300,7 @@
     <!-- We don't want the out-of-process test marker file to be included in referencing projects, so we don't include it as content. -->
     <WriteLinesToFile
         Condition="'$(RequiresProcessIsolation)' == 'true' and '$(BuildAsStandalone)' != 'true'"
-        File="$(OutputPath)\$(MSBuildProjectName).OutOfProcessTest"
+        File="$(OutputPath)\$(AssemblyName).OutOfProcessTest"
         Lines="OutOfProcessTest"
         Overwrite="true"
         WriteOnlyWhenDifferent="true" />

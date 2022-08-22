@@ -148,8 +148,8 @@ protected:
 
 public:
     bool genUseOptimizedWriteBarriers(GCInfo::WriteBarrierForm wbf);
-    bool genUseOptimizedWriteBarriers(GenTree* tgt, GenTree* assignVal);
-    CorInfoHelpFunc genWriteBarrierHelperForWriteBarrierForm(GenTree* tgt, GCInfo::WriteBarrierForm wbf);
+    bool genUseOptimizedWriteBarriers(GenTreeStoreInd* store);
+    CorInfoHelpFunc genWriteBarrierHelperForWriteBarrierForm(GCInfo::WriteBarrierForm wbf);
 
     // The following property indicates whether the current method sets up
     // an explicit stack frame or not.
@@ -295,8 +295,6 @@ protected:
 public:
     unsigned InferStructOpSizeAlign(GenTree* op, unsigned* alignmentWB);
     unsigned InferOpSizeAlign(GenTree* op, unsigned* alignmentWB);
-
-    void genMarkTreeInReg(GenTree* tree, regNumber reg);
 
     // Methods to abstract target information
 
@@ -723,8 +721,8 @@ public:
         VariableLiveDescriptor* m_vlrLiveDscForProlog; // Array of descriptors that manage VariableLiveRanges.
                                                        // Its indices correspond to lvaTable indexes (or lvSlotNum).
 
-        bool m_LastBasicBlockHasBeenEmited; // When true no more siEndVariableLiveRange is considered.
-                                            // No update/start happens when code has been generated.
+        bool m_LastBasicBlockHasBeenEmitted; // When true no more siEndVariableLiveRange is considered.
+                                             // No update/start happens when code has been generated.
 
     public:
         VariableLiveKeeper(unsigned int  totalLocalCount,

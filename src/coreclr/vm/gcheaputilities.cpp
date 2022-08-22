@@ -17,6 +17,9 @@ GPTR_IMPL_INIT(uint8_t,  g_highest_address, nullptr);
 GVAL_IMPL_INIT(GCHeapType, g_heap_type,     GC_HEAP_INVALID);
 uint8_t* g_ephemeral_low  = (uint8_t*)1;
 uint8_t* g_ephemeral_high = (uint8_t*)~0;
+uint8_t* g_region_to_generation_table = nullptr;
+uint8_t  g_region_shr = 0;
+bool g_region_use_bitwise_write_barrier = false;
 
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
 uint32_t* g_card_bundle_table = nullptr;
@@ -49,7 +52,7 @@ enum GC_LOAD_STATUS {
 };
 
 // Load status of the GC. If GC loading fails, the value of this
-// global indicates where the failure occured.
+// global indicates where the failure occurred.
 GC_LOAD_STATUS g_gc_load_status = GC_LOAD_STATUS_BEFORE_START;
 
 // The version of the GC that we have loaded.
@@ -60,7 +63,7 @@ PTR_VOID g_gc_module_base;
 
 bool GCHeapUtilities::s_useThreadAllocationContexts;
 
-// GC entrypoints for the the linked-in GC. These symbols are invoked
+// GC entrypoints for the linked-in GC. These symbols are invoked
 // directly if we are not using a standalone GC.
 extern "C" void GC_VersionInfo(/* Out */ VersionInfo* info);
 extern "C" HRESULT GC_Initialize(

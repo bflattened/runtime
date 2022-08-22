@@ -39,6 +39,7 @@ METHOD(op_OnesComplement)
 METHOD(op_Subtraction)
 METHOD(op_UnaryNegation)
 METHOD(op_UnaryPlus)
+METHOD(set_Item)
 // Vector
 METHOD(ConvertToInt32)
 METHOD(ConvertToInt32WithTruncation)
@@ -171,6 +172,7 @@ METHOD(ReciprocalSqrt)
 METHOD(ReciprocalSqrtScalar)
 METHOD(Sqrt)
 METHOD(SqrtScalar)
+METHOD(SquareRoot)
 // Sse2
 METHOD(AddSaturate)
 METHOD(AddScalar)
@@ -276,6 +278,7 @@ METHOD(ComputeCrc32C)
 // X86Base
 METHOD(BitScanForward)
 METHOD(BitScanReverse)
+METHOD(Pause)
 // Crypto
 METHOD(FixedRotate)
 METHOD(HashUpdateChoose)
