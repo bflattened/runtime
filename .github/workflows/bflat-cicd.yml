@@ -150,11 +150,6 @@ jobs:
     name: Publish release and NuGet
     if: ${{ github.event.inputs.version != '' && github.actor == 'MichalStrehovsky' }}
     steps:
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '6.0.x'
-          
       - name: Checkout repo
         uses: actions/checkout@v2
       
@@ -167,7 +162,7 @@ jobs:
         uses: actions/download-artifact@v2
           
       - name: Publish compiler package
-        run: dotnet nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg -s https://nuget.pkg.github.com/bflattened/index.json --api-key ${{ secrets.GITHUB_TOKEN }}
+        run: ./dotnet.sh nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg -s https://nuget.pkg.github.com/bflattened/index.json --api-key ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         id: create_release
