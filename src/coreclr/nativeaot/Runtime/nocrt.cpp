@@ -1,59 +1,14 @@
 #ifdef _WIN32
 #define _CRT_DISABLE 1
 
-extern "C" float nanf(char*)
-{
-    return __builtin_nanf("0");
-}
+extern "C" size_t __security_cookie = 0xBAADF00D;
 
-extern "C" double nan(char*)
-{
-    return __builtin_nan("0");
-}
-
-extern "C" double round(double d)
-{
-    // Whatever...
-    return (double)(__int64)(d + 0.5);
-}
-
-extern "C" float roundf(float d)
-{
-    // Whatever...
-    return (float)(int)(d + 0.5f);
-}
-
-
-#define nan not_really_nan
-#define nanf not_really_nanf
-#define round not_really_round
-#define roundf not_really_roundf
-
+extern "C" int __cdecl _purecall() { return 0; }
 
 #include <new>
 #include <cmath>
 namespace std {
 const std::nothrow_t nothrow = std::nothrow_t(); // define nothrow
-}
-
-#pragma function(_dclass)
-extern "C" short _dclass(double x)
-{
-	union {double f; uint64_t i;} u = {x};
-	int e = u.i>>52 & 0x7ff;
-	if (!e) return u.i<<1 ? FP_SUBNORMAL : FP_ZERO;
-	if (e==0x7ff) return u.i<<12 ? FP_NAN : FP_INFINITE;
-	return FP_NORMAL;
-}
-
-#pragma function(_fdclass)
-extern "C" short _fdclass(float x)
-{
-	union {float f; uint32_t i;} u = {x};
-	int e = u.i>>23 & 0xff;
-	if (!e) return u.i<<1 ? FP_SUBNORMAL : FP_ZERO;
-	if (e==0xff) return u.i<<9 ? FP_NAN : FP_INFINITE;
-	return FP_NORMAL;
 }
 
 void* operator new[](size_t const size, std::nothrow_t const& x) noexcept
@@ -93,10 +48,6 @@ extern "C" int _fltused = 0x9875;
 
 typedef int (__cdecl* _PIFV)(void);
 typedef void (__cdecl* _PVFV)(void);
-
-void __acrt_iob_func()
-{
-}
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
@@ -490,6 +441,35 @@ extern "C" int memcmp(const void *A, const void *B, size_t Count)
     }
     
     return 0;
+}
+
+#pragma function(memmove)
+extern "C" void* memmove(void *dest, void const *src, size_t len)
+{
+    size_t i;
+    char *char_src = (char*)src;
+    char *char_dest = (char*)dest;
+    if (char_dest > char_src)
+    {
+        if (len == 0)
+        {
+            return dest;
+        }
+        for (i = len - 1; ; i--)
+        {
+            char_dest[i] = char_src[i];
+            if (i == 0)
+                break;
+        }
+    }
+    else
+    {
+        for (i = 0; i < len; i++)
+        {
+            char_dest[i] = char_src[i];
+        }
+    }
+    return dest;
 }
 
 void __stdcall __ehvec_ctor(

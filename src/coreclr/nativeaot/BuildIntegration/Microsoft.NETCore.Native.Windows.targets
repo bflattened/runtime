@@ -34,8 +34,6 @@ The .NET Foundation licenses this file to you under the MIT license.
       <NativeLibrary Include="$(IlcSdkPath)$(BootstrapperName)$(LibrarySuffix)" />
       <NativeLibrary Include="$(IlcSdkPath)$(FullRuntimeName)$(LibrarySuffix)" />
       <NativeLibrary Condition="'$(IlcMultiModule)' == 'true'" Include="$(SharedLibrary)" />
-      <NativeLibrary Include="$(IlcSdkPath)msvcrt.lib" Condition="'$(TargetArchitecture)' == 'x64'" />
-      <NativeLibrary Include="shell32.lib" />
     </ItemGroup>
 
     <ItemGroup>
@@ -71,6 +69,25 @@ The .NET Foundation licenses this file to you under the MIT license.
 
     <ItemGroup>
       <DirectPInvokeList Include="$(MSBuildThisFileDirectory)WindowsAPIs.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-conio-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-convert-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-environment-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-filesystem-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-heap-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-locale-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-multibyte-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-process-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-runtime-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-stdio-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-string-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-time-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-utility-l1-1-0.lib" />
+      <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-math-l1-1-0.lib" />
+      <LinkerArg Include="/nodefaultlib:libcpmt.lib" />
+      <LinkerArg Include="shell32.lib" />
     </ItemGroup>
 
     <ItemGroup>
