@@ -13,9 +13,12 @@ namespace Microsoft.Extensions.DependencyModel
 {
     public class DependencyContextWriter
     {
-        public void Write(DependencyContext context!!, Stream stream!!)
+        public void Write(DependencyContext context, Stream stream)
         {
-            // Custom encoder is required to fix https://github.com/dotnet/core-setup/issues/7137
+            ThrowHelper.ThrowIfNull(context);
+            ThrowHelper.ThrowIfNull(stream);
+
+            // Custom encoder is required to fix https://github.com/dotnet/runtime/issues/3678
             // Since the JSON is only written to a file that is read by the SDK (and not transmitted over the wire),
             // it is safe to skip escaping certain characters in this scenario
             // (that would otherwise be escaped, by default, as part of defense-in-depth, such as +).
@@ -70,7 +73,7 @@ namespace Microsoft.Extensions.DependencyModel
 
         private static void WriteCompilationOptions(CompilationOptions compilationOptions, Utf8JsonWriter jsonWriter)
         {
-            jsonWriter.WriteStartObject(DependencyContextStrings.CompilationOptionsPropertName);
+            jsonWriter.WriteStartObject(DependencyContextStrings.CompilationOptionsPropertyName);
             if (compilationOptions.Defines?.Any() == true)
             {
                 jsonWriter.WriteStartArray(DependencyContextStrings.DefinesPropertyName);

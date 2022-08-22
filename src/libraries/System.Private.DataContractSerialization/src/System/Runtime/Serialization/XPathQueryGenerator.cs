@@ -2,12 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Text;
-using System.Reflection;
-using System.Globalization;
 using System.Collections.Generic;
-using System.Xml;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.Serialization.DataContracts;
+using System.Text;
+using System.Xml;
 
 namespace System.Runtime.Serialization
 {
@@ -26,8 +27,11 @@ namespace System.Runtime.Serialization
 
         // Here you can provide your own root element Xpath which will replace the Xpath of the top level element
         [RequiresUnreferencedCode(DataContract.SerializerTrimmerWarning)]
-        public static string CreateFromDataContractSerializer(Type type!!, MemberInfo[] pathToMember!!, StringBuilder? rootElementXpath, out XmlNamespaceManager namespaces)
+        public static string CreateFromDataContractSerializer(Type type, MemberInfo[] pathToMember, StringBuilder? rootElementXpath, out XmlNamespaceManager namespaces)
         {
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(pathToMember);
+
             DataContract currentContract = DataContract.GetDataContract(type);
             ExportContext context;
 
@@ -77,9 +81,9 @@ namespace System.Runtime.Serialization
 
         private static IEnumerable<DataMember> GetDataMembers(ClassDataContract contract)
         {
-            if (contract.BaseContract != null)
+            if (contract.BaseClassContract != null)
             {
-                foreach (DataMember baseClassMember in GetDataMembers(contract.BaseContract))
+                foreach (DataMember baseClassMember in GetDataMembers(contract.BaseClassContract))
                 {
                     yield return baseClassMember;
                 }

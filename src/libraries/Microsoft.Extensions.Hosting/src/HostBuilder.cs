@@ -29,7 +29,7 @@ namespace Microsoft.Extensions.Hosting
         private List<Action<HostBuilderContext, IConfigurationBuilder>> _configureAppConfigActions = new List<Action<HostBuilderContext, IConfigurationBuilder>>();
         private List<Action<HostBuilderContext, IServiceCollection>> _configureServicesActions = new List<Action<HostBuilderContext, IServiceCollection>>();
         private List<IConfigureContainerAdapter> _configureContainerActions = new List<IConfigureContainerAdapter>();
-        private IServiceFactoryAdapter _serviceProviderFactory = new ServiceFactoryAdapter<IServiceCollection>(new DefaultServiceProviderFactory());
+        private IServiceFactoryAdapter _serviceProviderFactory;
         private bool _hostBuilt;
         private IConfiguration? _hostConfiguration;
         private IConfiguration? _appConfiguration;
@@ -37,6 +37,12 @@ namespace Microsoft.Extensions.Hosting
         private HostingEnvironment? _hostingEnvironment;
         private IServiceProvider? _appServices;
         private PhysicalFileProvider? _defaultProvider;
+
+        [RequiresDynamicCode(Host.RequiresDynamicCodeMessage)]
+        public HostBuilder()
+        {
+            _serviceProviderFactory = new ServiceFactoryAdapter<IServiceCollection>(new DefaultServiceProviderFactory());
+        }
 
         /// <summary>
         /// A central location for sharing state between components during the host building process.
@@ -50,8 +56,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="configureDelegate">The delegate for configuring the <see cref="IConfigurationBuilder"/> that will be used
         /// to construct the <see cref="IConfiguration"/> for the host.</param>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder ConfigureHostConfiguration(Action<IConfigurationBuilder> configureDelegate!!)
+        public IHostBuilder ConfigureHostConfiguration(Action<IConfigurationBuilder> configureDelegate)
         {
+            ThrowHelper.ThrowIfNull(configureDelegate);
+
             _configureHostConfigActions.Add(configureDelegate);
             return this;
         }
@@ -64,8 +72,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="configureDelegate">The delegate for configuring the <see cref="IConfigurationBuilder"/> that will be used
         /// to construct the <see cref="IConfiguration"/> for the host.</param>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder ConfigureAppConfiguration(Action<HostBuilderContext, IConfigurationBuilder> configureDelegate!!)
+        public IHostBuilder ConfigureAppConfiguration(Action<HostBuilderContext, IConfigurationBuilder> configureDelegate)
         {
+            ThrowHelper.ThrowIfNull(configureDelegate);
+
             _configureAppConfigActions.Add(configureDelegate);
             return this;
         }
@@ -76,8 +86,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="configureDelegate">The delegate for configuring the <see cref="IConfigurationBuilder"/> that will be used
         /// to construct the <see cref="IConfiguration"/> for the host.</param>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder ConfigureServices(Action<HostBuilderContext, IServiceCollection> configureDelegate!!)
+        public IHostBuilder ConfigureServices(Action<HostBuilderContext, IServiceCollection> configureDelegate)
         {
+            ThrowHelper.ThrowIfNull(configureDelegate);
+
             _configureServicesActions.Add(configureDelegate);
             return this;
         }
@@ -88,8 +100,10 @@ namespace Microsoft.Extensions.Hosting
         /// <typeparam name="TContainerBuilder">The type of the builder to create.</typeparam>
         /// <param name="factory">A factory used for creating service providers.</param>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory!!) where TContainerBuilder : notnull
+        public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory) where TContainerBuilder : notnull
         {
+            ThrowHelper.ThrowIfNull(factory);
+
             _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(factory);
             return this;
         }
@@ -100,8 +114,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="factory">A factory used for creating service providers.</param>
         /// <typeparam name="TContainerBuilder">The type of the builder to create.</typeparam>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(Func<HostBuilderContext, IServiceProviderFactory<TContainerBuilder>> factory!!) where TContainerBuilder : notnull
+        public IHostBuilder UseServiceProviderFactory<TContainerBuilder>(Func<HostBuilderContext, IServiceProviderFactory<TContainerBuilder>> factory) where TContainerBuilder : notnull
         {
+            ThrowHelper.ThrowIfNull(factory);
+
             _serviceProviderFactory = new ServiceFactoryAdapter<TContainerBuilder>(() => _hostBuilderContext!, factory);
             return this;
         }
@@ -114,8 +130,10 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="configureDelegate">The delegate for configuring the <see cref="IConfigurationBuilder"/> that will be used
         /// to construct the <see cref="IConfiguration"/> for the host.</param>
         /// <returns>The same instance of the <see cref="IHostBuilder"/> for chaining.</returns>
-        public IHostBuilder ConfigureContainer<TContainerBuilder>(Action<HostBuilderContext, TContainerBuilder> configureDelegate!!)
+        public IHostBuilder ConfigureContainer<TContainerBuilder>(Action<HostBuilderContext, TContainerBuilder> configureDelegate)
         {
+            ThrowHelper.ThrowIfNull(configureDelegate);
+
             _configureContainerActions.Add(new ConfigureContainerAdapter<TContainerBuilder>(configureDelegate));
             return this;
         }
@@ -170,6 +188,8 @@ namespace Microsoft.Extensions.Hosting
             return diagnosticListener;
         }
 
+        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode",
+            Justification = "DiagnosticSource is used here to pass objects in-memory to code using HostFactoryResolver. This won't require creating new generic types.")]
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:UnrecognizedReflectionPattern",
             Justification = "The values being passed into Write are being consumed by the application already.")]
         private static void Write<T>(
@@ -204,15 +224,20 @@ namespace Microsoft.Extensions.Hosting
         {
             var hostingEnvironment = new HostingEnvironment()
             {
-                ApplicationName = hostConfiguration[HostDefaults.ApplicationKey],
                 EnvironmentName = hostConfiguration[HostDefaults.EnvironmentKey] ?? Environments.Production,
                 ContentRootPath = ResolveContentRootPath(hostConfiguration[HostDefaults.ContentRootKey], AppContext.BaseDirectory),
             };
 
-            if (string.IsNullOrEmpty(hostingEnvironment.ApplicationName))
+            string? applicationName = hostConfiguration[HostDefaults.ApplicationKey];
+            if (string.IsNullOrEmpty(applicationName))
             {
                 // Note GetEntryAssembly returns null for the net4x console test runner.
-                hostingEnvironment.ApplicationName = Assembly.GetEntryAssembly()?.GetName().Name;
+                applicationName = Assembly.GetEntryAssembly()?.GetName().Name;
+            }
+
+            if (applicationName is not null)
+            {
+                hostingEnvironment.ApplicationName = applicationName;
             }
 
             var physicalFileProvider = new PhysicalFileProvider(hostingEnvironment.ContentRootPath);

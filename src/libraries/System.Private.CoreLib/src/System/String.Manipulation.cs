@@ -42,8 +42,10 @@ namespace System
         public static string Concat(object? arg0, object? arg1, object? arg2) =>
             Concat(arg0?.ToString(), arg1?.ToString(), arg2?.ToString());
 
-        public static string Concat(params object?[] args!!)
+        public static string Concat(params object?[] args)
         {
+            ArgumentNullException.ThrowIfNull(args);
+
             if (args.Length <= 1)
             {
                 return args.Length == 0 ?
@@ -102,8 +104,10 @@ namespace System
             return result;
         }
 
-        public static string Concat<T>(IEnumerable<T> values!!)
+        public static string Concat<T>(IEnumerable<T> values)
         {
+            ArgumentNullException.ThrowIfNull(values);
+
             if (typeof(T) == typeof(char))
             {
                 // Special-case T==char, as we can handle that case much more efficiently,
@@ -183,8 +187,10 @@ namespace System
             }
         }
 
-        public static string Concat(IEnumerable<string?> values!!)
+        public static string Concat(IEnumerable<string?> values)
         {
+            ArgumentNullException.ThrowIfNull(values);
+
             using (IEnumerator<string?> en = values.GetEnumerator())
             {
                 if (!en.MoveNext())
@@ -361,8 +367,10 @@ namespace System
             return result;
         }
 
-        public static string Concat(params string?[] values!!)
+        public static string Concat(params string?[] values)
         {
+            ArgumentNullException.ThrowIfNull(values);
+
             if (values.Length <= 1)
             {
                 return values.Length == 0 ?
@@ -428,17 +436,19 @@ namespace System
 
         public static string Format([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0)
         {
-            return FormatHelper(null, format, new ParamsArray(arg0));
+            return FormatHelper(null, format, new ReadOnlySpan<object?>(in arg0));
         }
 
         public static string Format([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0, object? arg1)
         {
-            return FormatHelper(null, format, new ParamsArray(arg0, arg1));
+            TwoObjects two = new TwoObjects(arg0, arg1);
+            return FormatHelper(null, format, MemoryMarshal.CreateReadOnlySpan(ref two.Arg0, 2));
         }
 
         public static string Format([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0, object? arg1, object? arg2)
         {
-            return FormatHelper(null, format, new ParamsArray(arg0, arg1, arg2));
+            ThreeObjects three = new ThreeObjects(arg0, arg1, arg2);
+            return FormatHelper(null, format, MemoryMarshal.CreateReadOnlySpan(ref three.Arg0, 3));
         }
 
         public static string Format([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, params object?[] args)
@@ -450,22 +460,24 @@ namespace System
                 ArgumentNullException.Throw(format is null ? nameof(format) : nameof(args));
             }
 
-            return FormatHelper(null, format, new ParamsArray(args));
+            return FormatHelper(null, format, args);
         }
 
         public static string Format(IFormatProvider? provider, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0)
         {
-            return FormatHelper(provider, format, new ParamsArray(arg0));
+            return FormatHelper(provider, format, new ReadOnlySpan<object?>(in arg0));
         }
 
         public static string Format(IFormatProvider? provider, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0, object? arg1)
         {
-            return FormatHelper(provider, format, new ParamsArray(arg0, arg1));
+            TwoObjects two = new TwoObjects(arg0, arg1);
+            return FormatHelper(provider, format, MemoryMarshal.CreateReadOnlySpan(ref two.Arg0, 2));
         }
 
         public static string Format(IFormatProvider? provider, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, object? arg0, object? arg1, object? arg2)
         {
-            return FormatHelper(provider, format, new ParamsArray(arg0, arg1, arg2));
+            ThreeObjects three = new ThreeObjects(arg0, arg1, arg2);
+            return FormatHelper(provider, format, MemoryMarshal.CreateReadOnlySpan(ref three.Arg0, 3));
         }
 
         public static string Format(IFormatProvider? provider, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string format, params object?[] args)
@@ -477,19 +489,23 @@ namespace System
                 ArgumentNullException.Throw(format is null ? nameof(format) : nameof(args));
             }
 
-            return FormatHelper(provider, format, new ParamsArray(args));
+            return FormatHelper(provider, format, args);
         }
 
-        private static string FormatHelper(IFormatProvider? provider, string format!!, ParamsArray args)
+        private static string FormatHelper(IFormatProvider? provider, string format, ReadOnlySpan<object?> args)
         {
+            ArgumentNullException.ThrowIfNull(format);
+
             var sb = new ValueStringBuilder(stackalloc char[256]);
             sb.EnsureCapacity(format.Length + args.Length * 8);
             sb.AppendFormatHelper(provider, format, args);
             return sb.ToString();
         }
 
-        public string Insert(int startIndex, string value!!)
+        public string Insert(int startIndex, string value)
         {
+            ArgumentNullException.ThrowIfNull(value);
+
             if ((uint)startIndex > Length)
                 throw new ArgumentOutOfRangeException(nameof(startIndex));
 
@@ -538,8 +554,10 @@ namespace System
         public static string Join(string? separator, string?[] value, int startIndex, int count) =>
             JoinCore(separator.AsSpan(), value, startIndex, count);
 
-        private static string JoinCore(ReadOnlySpan<char> separator, string?[] value!!, int startIndex, int count)
+        private static string JoinCore(ReadOnlySpan<char> separator, string?[] value, int startIndex, int count)
         {
+            ArgumentNullException.ThrowIfNull(value);
+
             if (startIndex < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndex), SR.ArgumentOutOfRange_StartIndex);
@@ -1180,8 +1198,10 @@ namespace System
         /// This method is guaranteed O(n * r) complexity, where <em>n</em> is the length of the input string,
         /// and where <em>r</em> is the length of <paramref name="replacementText"/>.
         /// </remarks>
-        public string ReplaceLineEndings(string replacementText!!)
+        public string ReplaceLineEndings(string replacementText)
         {
+            ArgumentNullException.ThrowIfNull(replacementText);
+
             // Early-exit: do we need to do anything at all?
             // If not, return this string as-is.
 
@@ -1319,17 +1339,7 @@ namespace System
             {
                 // Per the method's documentation, we'll short-circuit the search for separators.
                 // But we still need to post-process the results based on the caller-provided flags.
-
-                string candidate = this;
-                if (((options & StringSplitOptions.TrimEntries) != 0) && (count > 0))
-                {
-                    candidate = candidate.Trim();
-                }
-                if (((options & StringSplitOptions.RemoveEmptyEntries) != 0) && (candidate.Length == 0))
-                {
-                    count = 0;
-                }
-                return (count == 0) ? Array.Empty<string>() : new string[] { candidate };
+                return CreateSplitArrayOfThisAsSoleValue(options, count);
             }
 
             if (separators.IsEmpty)
@@ -1402,17 +1412,7 @@ namespace System
             {
                 // Per the method's documentation, we'll short-circuit the search for separators.
                 // But we still need to post-process the results based on the caller-provided flags.
-
-                string candidate = this;
-                if (((options & StringSplitOptions.TrimEntries) != 0) && (count > 0))
-                {
-                    candidate = candidate.Trim();
-                }
-                if (((options & StringSplitOptions.RemoveEmptyEntries) != 0) && (candidate.Length == 0))
-                {
-                    count = 0;
-                }
-                return (count == 0) ? Array.Empty<string>() : new string[] { candidate };
+                return CreateSplitArrayOfThisAsSoleValue(options, count);
             }
 
             if (singleSeparator)
@@ -1438,7 +1438,7 @@ namespace System
             // Handle the special case of no replaces.
             if (sepList.Length == 0)
             {
-                return new string[] { this };
+                return CreateSplitArrayOfThisAsSoleValue(options, count);
             }
 
             string[] result = (options != StringSplitOptions.None)
@@ -1451,6 +1451,28 @@ namespace System
             return result;
         }
 
+        private string[] CreateSplitArrayOfThisAsSoleValue(StringSplitOptions options, int count)
+        {
+            Debug.Assert(count >= 0);
+
+            if (count != 0)
+            {
+                string candidate = this;
+
+                if ((options & StringSplitOptions.TrimEntries) != 0)
+                {
+                    candidate = candidate.Trim();
+                }
+
+                if ((options & StringSplitOptions.RemoveEmptyEntries) == 0 || candidate.Length != 0)
+                {
+                    return new string[] { candidate };
+                }
+            }
+
+            return Array.Empty<string>();
+        }
+
         private string[] SplitInternal(string separator, int count, StringSplitOptions options)
         {
             var sepListBuilder = new ValueListBuilder<int>(stackalloc int[StackallocIntBufferSizeLimit]);
@@ -1460,14 +1482,7 @@ namespace System
             if (sepList.Length == 0)
             {
                 // there are no separators so sepListBuilder did not rent an array from pool and there is no need to dispose it
-                string candidate = this;
-                if ((options & StringSplitOptions.TrimEntries) != 0)
-                {
-                    candidate = candidate.Trim();
-                }
-                return ((candidate.Length == 0) && ((options & StringSplitOptions.RemoveEmptyEntries) != 0))
-                    ? Array.Empty<string>()
-                    : new string[] { candidate };
+                return CreateSplitArrayOfThisAsSoleValue(options, count);
             }
 
             string[] result = (options != StringSplitOptions.None)
@@ -1783,41 +1798,63 @@ namespace System
 
         // Returns a substring of this string.
         //
-        public string Substring(int startIndex) => Substring(startIndex, Length - startIndex);
-
-        public string Substring(int startIndex, int length)
+        public string Substring(int startIndex)
         {
-            if (startIndex < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startIndex), SR.ArgumentOutOfRange_StartIndex);
-            }
-
-            if (startIndex > Length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startIndex), SR.ArgumentOutOfRange_StartIndexLargerThanLength);
-            }
-
-            if (length < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(length), SR.ArgumentOutOfRange_NegativeLength);
-            }
-
-            if (startIndex > Length - length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(length), SR.ArgumentOutOfRange_IndexLength);
-            }
-
-            if (length == 0)
-            {
-                return string.Empty;
-            }
-
-            if (startIndex == 0 && length == this.Length)
+            if (startIndex == 0)
             {
                 return this;
             }
 
+            int length = Length - startIndex;
+            if (length == 0)
+            {
+                return Empty;
+            }
+
+            if ((uint)startIndex > (uint)Length)
+            {
+                ThrowSubstringArgumentOutOfRange(startIndex, length);
+            }
+
             return InternalSubString(startIndex, length);
+        }
+
+        public string Substring(int startIndex, int length)
+        {
+#if TARGET_64BIT
+            // See comment in Span<T>.Slice for how this works.
+            if ((ulong)(uint)startIndex + (ulong)(uint)length > (ulong)(uint)Length)
+#else
+            if ((uint)startIndex > (uint)Length || (uint)length > (uint)(Length - startIndex))
+#endif
+            {
+                ThrowSubstringArgumentOutOfRange(startIndex, length);
+            }
+
+            if (length == 0)
+            {
+                return Empty;
+            }
+
+            if (length == Length)
+            {
+                Debug.Assert(startIndex == 0);
+                return this;
+            }
+
+            return InternalSubString(startIndex, length);
+        }
+
+        [DoesNotReturn]
+        private void ThrowSubstringArgumentOutOfRange(int startIndex, int length)
+        {
+            (string paramName, string message) =
+                startIndex < 0 ? (nameof(startIndex), SR.ArgumentOutOfRange_StartIndex) :
+                startIndex > Length ? (nameof(startIndex), SR.ArgumentOutOfRange_StartIndexLargerThanLength) :
+                length < 0 ? (nameof(length), SR.ArgumentOutOfRange_NegativeLength) :
+                (nameof(length), SR.ArgumentOutOfRange_IndexLength);
+
+            throw new ArgumentOutOfRangeException(paramName, message);
         }
 
         private string InternalSubString(int startIndex, int length)
