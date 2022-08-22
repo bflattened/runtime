@@ -81,9 +81,9 @@ namespace ILCompiler
                 case Architecture.Arm64:
                     arch = TargetArchitecture.ARM64;
                     break;
-                case Architecture.LoongArch64:
-                    arch = TargetArchitecture.LoongArch64;
-                    break;
+//                case Architecture.LoongArch64:
+//                    arch = TargetArchitecture.LoongArch64;
+//                    break;
                 default:
                     throw new NotImplementedException();
             }
