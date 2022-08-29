@@ -37,17 +37,7 @@ jobs:
     name: Build and test ${{ matrix.os }} ${{ matrix.arch }}
     container: ${{ matrix.container }}
     steps:
-      - name: Install git (CentOS)
-        run: sudo yum install git
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
-        
-      - name: Install git (Ubuntu)
-        run: |
-          apt-get update
-          apt-get -yqq install git
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
-    
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
 
       - name: Build the product (Linux)
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
