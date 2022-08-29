@@ -43,8 +43,8 @@ jobs:
         
       - name: Install git (Ubuntu)
         run: |
-          sudo apt-get update
-          sudo apt-get -yqq install git
+          apt-get update
+          apt-get -yqq install git
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
     
       - uses: actions/checkout@v2
