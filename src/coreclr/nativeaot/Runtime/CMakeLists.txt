@@ -1,7 +1,6 @@
 set(GC_DIR ../../gc)
 
 set(COMMON_RUNTIME_SOURCES
-    nocrt.cpp
     allocheap.cpp
     rhassert.cpp
     CachedInterfaceDispatch.cpp
