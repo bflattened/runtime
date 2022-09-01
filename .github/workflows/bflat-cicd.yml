@@ -130,7 +130,17 @@ jobs:
         with:
           name: refs
           path: artifacts/bflat-refs.zip
-          
+
+      - name: Free up disk space for test run (Windows)
+        shell: cmd
+        run: |
+          rmdir /S /Q artifacts\bflat-libs
+          rmdir /S /Q artifacts\bflat-compiler-native
+          rmdir /S /Q artifacts\obj\coreclr
+          del artifacts\bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
+          del artifacts\bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
+        if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
+
       - name: Build tests (Linux)
         run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot'
         if: ${{ matrix.vm == 'ubuntu-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}

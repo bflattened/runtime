@@ -4,7 +4,6 @@ add_definitions(-DNATIVEAOT_DLL)
 
 set(SOURCES
     ../main.cpp
-    nocrt.cpp
 )
 
 add_library(bootstrapperdll STATIC ${SOURCES})
