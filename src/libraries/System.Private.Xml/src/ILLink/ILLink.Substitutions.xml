@@ -1,0 +1,5 @@
+<linker>
+  <type fullname="System.Xml.XmlDownloadManager" featurevalue="false" feature="System.Xml.XmlDownloadManager.IsNonFileStreamSupported">
+    <method signature="System.Threading.Tasks.Task`1&lt;System.IO.Stream&gt; GetNonFileStreamAsync(System.Uri,System.Net.ICredentials,System.Net.IWebProxy)" body="remove" />
+  </type>
+</linker>

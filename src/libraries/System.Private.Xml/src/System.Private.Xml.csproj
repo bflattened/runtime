@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ILLinkSubstitutionsXmls Include="ILLink\ILLink.Substitutions.xml" />
+  </ItemGroup>
   <PropertyGroup>
     <TargetFrameworks>$(NetCoreAppCurrent)-windows;$(NetCoreAppCurrent)</TargetFrameworks>
     <RootNamespace>System.Xml</RootNamespace>
