@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [ bflat-main ]
+    branches: [ bflat-main, bflat-release/7.0 ]
 
   workflow_dispatch:
     inputs:
@@ -41,18 +41,15 @@ jobs:
 
       - name: Build the product (Linux)
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
-#        run: ./build.sh clr.alljits+clr.tools -c Release -arch ${{ matrix.arch }}
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
       - name: Build the product (Linux cross)
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
-#        run: ./build.sh clr.alljits+clr.tools -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
       - name: Build the product (Windows)
         shell: cmd
         run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
-#        run: build.cmd clr.alljits+clr.tools -c Release -arch ${{ matrix.arch }}
         if: ${{ matrix.vm == 'windows-latest' }}
 
       - name: Package compiler
@@ -185,7 +182,7 @@ jobs:
         with:
           tag_name: v${{ github.event.inputs.version }}
           release_name: v${{ github.event.inputs.version }}
-          draft: true
+          draft: false
           prerelease: false
 
       - name: Upload refs
