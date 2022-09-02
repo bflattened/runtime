@@ -47,4 +47,4 @@ jobs:
         auth_token: ${{ secrets.GITHUB_TOKEN }}
         source_branch: merge-${{ github.event.inputs.branch }}
         target_branch: bflat-${{ github.event.inputs.branch }}
-        pr_title: [${{ github.event.inputs.branch }}] Merge from dotnet/runtime
+        pr_title: '[${{ github.event.inputs.branch }}] Merge from dotnet/runtime'
