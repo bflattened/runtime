@@ -4145,9 +4145,7 @@ private:
     regNumber getCallArgIntRegister(regNumber floatReg);
     regNumber getCallArgFloatRegister(regNumber intReg);
 
-#if defined(DEBUG)
     static unsigned jitTotalMethodCompiled;
-#endif
 
 #ifdef DEBUG
     static LONG jitNestingLevel;
@@ -9293,6 +9291,9 @@ public:
         // Use early multi-dimensional array operator expansion (expand after loop optimizations; before lowering).
         bool compJitEarlyExpandMDArrays;
 
+        // Collect 64 bit counts for PGO data.
+        bool compCollect64BitCounts;
+
     } opts;
 
     static bool                s_pAltJitExcludeAssembliesListInitialized;
@@ -9472,6 +9473,7 @@ public:
     }
 
     const char* compGetTieringName(bool wantShortName = false) const;
+    const char* compGetPgoSourceName() const;
     const char* compGetStressMessage() const;
 
     codeOptimize compCodeOpt() const
