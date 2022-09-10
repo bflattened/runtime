@@ -27,6 +27,8 @@
     <_WasmStrictVersionMatch Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</_WasmStrictVersionMatch>
     <XUnitUseRandomizedTestOrderer Condition="'$(XUnitUseRandomizedTestOrderer)' == '' and '$(IsTestProject)' == 'true'">true</XUnitUseRandomizedTestOrderer>
     <_UseWasmSymbolicator Condition="'$(TestTrimming)' != 'true'">true</_UseWasmSymbolicator>
+    <WasmIgnoreNet6WorkloadInstallErrors Condition="'$(WasmIgnoreNet6WorkloadInstallErrors)' == ''">true</WasmIgnoreNet6WorkloadInstallErrors>
+    <WasmIgnoreNet6WorkloadInstallErrors Condition="'$(WasmIgnoreNet6WorkloadInstallErrors)' != 'true'">false</WasmIgnoreNet6WorkloadInstallErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(EnableAggressiveTrimming)' == 'true'">
@@ -103,6 +105,8 @@
     <_AOTBuildCommand Condition="'$(ContinuousIntegrationBuild)' != 'true'">$(_AOTBuildCommand) /p:RuntimeSrcDir=$(RepoRoot) /p:RuntimeConfig=$(Configuration)</_AOTBuildCommand>
 
     <_AOTBuildCommand>$(_AOTBuildCommand) /p:RunAOTCompilation=$(RunAOTCompilation)</_AOTBuildCommand>
+    <_AOTBuildCommand Condition="'$(BrowserHost)' == 'windows'">$(_AOTBuildCommand) %AOT_BUILD_ARGS%</_AOTBuildCommand>
+    <_AOTBuildCommand Condition="'$(BrowserHost)' != 'windows'">$(_AOTBuildCommand) %24AOT_BUILD_ARGS</_AOTBuildCommand>
     <_AOTBuildCommand>$(_AOTBuildCommand) $(_ShellCommandSeparator) cd wasm_build/AppBundle</_AOTBuildCommand>
 
     <RunScriptCommand Condition="'$(RunScriptCommand)' == ''">$(_AOTBuildCommand)</RunScriptCommand>
@@ -138,14 +142,27 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <WorkloadIdForTesting Include="wasm-tools"
-                          ManifestName="Microsoft.NET.Workload.Mono.ToolChain"
+    <WorkloadIdForTesting Include="wasm-tools;wasm-experimental"
+                          ManifestName="Microsoft.NET.Workload.Mono.ToolChain.net7"
+                          Variant="net7"
                           Version="$(PackageVersion)"
                           VersionBand="$(SdkBandVersion)" />
-    <WorkloadIdForTesting Include="wasm-experimental"
-                          ManifestName="Microsoft.NET.Workload.Mono.ToolChain"
+
+    <WorkloadIdForTesting Include="wasm-tools-net6"
+                          ManifestName="Microsoft.NET.Workload.Mono.ToolChain.net6"
+                          Variant="net6"
                           Version="$(PackageVersion)"
-                          VersionBand="$(SdkBandVersion)" />
+                          VersionBand="$(SdkBandVersion)"
+                          IgnoreErrors="$(WasmIgnoreNet6WorkloadInstallErrors)"
+                          />
+
+    <WorkloadCombinationsToInstall Include="net7"   Variants="net7" />
+    <!-- Latest net6 6.0.x versions are not available in feed currently so don't install them -->
+    <!--
+    <WorkloadCombinationsToInstall Include="net6"   Variants="net6" />
+    <WorkloadCombinationsToInstall Include="net6+7" Variants="net6;net7" />
+    -->
+    <!--<WorkloadCombinationsToInstall Include="none" />-->
 
     <WasmExtraFilesToDeploy Condition="'$(_UseWasmSymbolicator)' == 'true'" Include="$(MonoProjectRoot)wasm\data\wasm-symbol-patterns.txt" />
     <WasmExtraFilesToDeploy Condition="'$(_UseWasmSymbolicator)' == 'true'" Include="$(ArtifactsBinDir)WasmSymbolicator\$(Configuration)\$(NetCoreAppToolCurrent)\WasmSymbolicator.dll" />

@@ -19,6 +19,7 @@
     <TestPackages Condition="'$(TestPackages)' == ''">false</TestPackages>
     <TestTrimming Condition="'$(TestTrimming)' == ''">false</TestTrimming>
 
+    <RunWasmSIMDSmokeTests Condition="'$(TargetOS)' == 'browser' and '$(BuildAOTTestsOnHelix)' == 'true' and '$(ContinuousIntegrationBuild)' == 'true'">true</RunWasmSIMDSmokeTests>
     <RunHighAOTResourceRequiringTestsOnly Condition="'$(RunHighAOTResourceRequiringTestsOnly)' == ''">false</RunHighAOTResourceRequiringTestsOnly>
 
     <!-- Don't build samples, and functional tests on EAT, AOT, WBT, and Debugger lanes -->
@@ -333,7 +334,8 @@
     <ProjectExclusions Include="$(MSBuildThisFileDirectory)System.Net.Quic/tests/FunctionalTests/System.Net.Quic.Functional.Tests.csproj" />
     <!-- https://github.com/dotnet/runtime/issues/51414 -->
     <ProjectExclusions Include="$(MSBuildThisFileDirectory)System.Security.Cryptography.OpenSsl/tests/System.Security.Cryptography.OpenSsl.Tests.csproj" />
-
+    <!-- https://github.com/dotnet/runtime/issues/74245 -->
+    <ProjectExclusions Include="$(RepoRoot)/src/tests/FunctionalTests/iOS/Simulator/XmlSerializer_Deserialize/iOS.Simulator.XmlSerializer_Deserialize.Test.csproj" />
     <!-- App Crash https://github.com/dotnet/runtime/issues/53624 -->
     <ProjectExclusions Include="$(MSBuildThisFileDirectory)System.Net.Requests/tests/System.Net.Requests.Tests.csproj" />
     <ProjectExclusions Include="$(MSBuildThisFileDirectory)System.Net.Security/tests/FunctionalTests/System.Net.Security.Tests.csproj" />
@@ -544,7 +546,12 @@
   </ItemGroup>
 
   <ItemGroup>
-     <SmokeTestProject Include="$(MSBuildThisFileDirectory)System.Runtime\tests\System.Runtime.Tests.csproj" />
+    <SmokeTestProject Include="$(MSBuildThisFileDirectory)System.Runtime\tests\System.Runtime.Tests.csproj" />
+
+    <!-- Test SIMD too -->
+    <SmokeTestProject
+        Condition="'$(RunWasmSIMDSmokeTests)' == 'true'"
+        Include="$(MSBuildThisFileDirectory)System.Runtime.Intrinsics\tests\System.Runtime.Intrinsics.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TestNativeAot)' == 'true'">

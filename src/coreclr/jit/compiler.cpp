@@ -34,9 +34,7 @@ extern ICorJitHost* g_jitHost;
 #define COLUMN_FLAGS (COLUMN_KINDS + 32)
 #endif
 
-#if defined(DEBUG)
 unsigned Compiler::jitTotalMethodCompiled = 0;
-#endif // defined(DEBUG)
 
 #if defined(DEBUG)
 LONG Compiler::jitNestingLevel = 0;
@@ -1771,6 +1769,7 @@ void Compiler::compInit(ArenaAllocator*       pAlloc,
     info.compCompHnd    = compHnd;
     info.compMethodHnd  = methodHnd;
     info.compMethodInfo = methodInfo;
+    info.compClassHnd   = compHnd->getMethodClass(methodHnd);
 
 #ifdef DEBUG
     bRangeAllowStress = false;
@@ -1790,17 +1789,10 @@ void Compiler::compInit(ArenaAllocator*       pAlloc,
     info.compClassName  = nullptr;
     info.compFullName   = nullptr;
 
-    const char* classNamePtr;
-    const char* methodName;
-
-    methodName          = eeGetMethodName(methodHnd, &classNamePtr);
-    unsigned len        = (unsigned)roundUp(strlen(classNamePtr) + 1);
-    info.compClassName  = getAllocator(CMK_DebugOnly).allocate<char>(len);
-    info.compMethodName = methodName;
-    strcpy_s((char*)info.compClassName, len, classNamePtr);
-
-    info.compFullName  = eeGetMethodFullName(methodHnd);
-    info.compPerfScore = 0.0;
+    info.compMethodName = eeGetMethodName(methodHnd, nullptr);
+    info.compClassName  = eeGetClassName(info.compClassHnd);
+    info.compFullName   = eeGetMethodFullName(methodHnd);
+    info.compPerfScore  = 0.0;
 
     info.compMethodSuperPMIIndex = g_jitHost->getIntConfigValue(W("SuperPMIMethodContextNumber"), -1);
 #endif // defined(DEBUG) || defined(LATE_DISASM) || DUMP_FLOWGRAPHS
@@ -2539,7 +2531,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
 
     if (opts.jitFlags->IsSet(JitFlags::JIT_FLAG_ALT_JIT))
     {
-        if (pfAltJit->contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        if (pfAltJit->contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
         {
             opts.altJit = true;
         }
@@ -2620,7 +2612,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
     //
     if (compIsForImportOnly() && (!altJitConfig || opts.altJit))
     {
-        if (JitConfig.JitImportBreak().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        if (JitConfig.JitImportBreak().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
         {
             assert(!"JitImportBreak reached");
         }
@@ -2635,7 +2627,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         //
         if (!compIsForInlining())
         {
-            if (JitConfig.JitDump().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 verboseDump = true;
             }
@@ -2870,32 +2862,32 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
                 opts.dspOrder = true;
             }
 
-            if (JitConfig.JitGCDump().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitGCDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 opts.dspGCtbls = true;
             }
 
-            if (JitConfig.JitDisasm().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitDisasm().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 opts.disAsm = true;
             }
 
-            if (JitConfig.JitDisasm().contains("SPILLED", nullptr, nullptr))
+            if (JitConfig.JitDisasmSpilled())
             {
                 opts.disAsmSpilled = true;
             }
 
-            if (JitConfig.JitUnwindDump().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitUnwindDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 opts.dspUnwind = true;
             }
 
-            if (JitConfig.JitEHDump().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitEHDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 opts.dspEHTable = true;
             }
 
-            if (JitConfig.JitDebugDump().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+            if (JitConfig.JitDebugDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 opts.dspDebugInfo = true;
             }
@@ -2933,7 +2925,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
             opts.compLongAddress = true;
         }
 
-        if (JitConfig.JitOptRepeat().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        if (JitConfig.JitOptRepeat().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
         {
             opts.optRepeat = true;
         }
@@ -2943,7 +2935,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         // JitEarlyExpandMDArraysFilter.
         if (JitConfig.JitEarlyExpandMDArrays() == 0)
         {
-            if (JitConfig.JitEarlyExpandMDArraysFilter().contains(info.compMethodName, info.compClassName,
+            if (JitConfig.JitEarlyExpandMDArraysFilter().contains(info.compMethodHnd, info.compClassHnd,
                                                                   &info.compMethodInfo->args))
             {
                 opts.compJitEarlyExpandMDArrays = true;
@@ -2984,7 +2976,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         printf(""); // in our logic this causes a flush
     }
 
-    if (JitConfig.JitBreak().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+    if (JitConfig.JitBreak().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         assert(!"JitBreak reached");
     }
@@ -2996,8 +2988,8 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
     }
 
     if (verbose ||
-        JitConfig.JitDebugBreak().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args) ||
-        JitConfig.JitBreak().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        JitConfig.JitDebugBreak().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args) ||
+        JitConfig.JitBreak().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         compDebugBreak = true;
     }
@@ -3016,14 +3008,9 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         s_pJitFunctionFileInitialized = true;
     }
 #else  // DEBUG
-    if (!JitConfig.JitDisasm().isEmpty())
+    if (JitConfig.JitDisasm().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
-        const char* methodName = info.compCompHnd->getMethodName(info.compMethodHnd, nullptr);
-        const char* className  = info.compCompHnd->getClassName(info.compClassHnd);
-        if (JitConfig.JitDisasm().contains(methodName, className, &info.compMethodInfo->args))
-        {
-            opts.disAsm = true;
-        }
+        opts.disAsm = true;
     }
 #endif // !DEBUG
 
@@ -3191,27 +3178,42 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         // JitForceProcedureSplitting is used to force procedure splitting on checked assemblies.
         // This is useful for debugging on a checked build.  Note that we still only do procedure
         // splitting in the zapper.
-        if (JitConfig.JitForceProcedureSplitting().contains(info.compMethodName, info.compClassName,
+        if (JitConfig.JitForceProcedureSplitting().contains(info.compMethodHnd, info.compClassHnd,
                                                             &info.compMethodInfo->args))
         {
             opts.compProcedureSplitting = true;
         }
 
         // JitNoProcedureSplitting will always disable procedure splitting.
-        if (JitConfig.JitNoProcedureSplitting().contains(info.compMethodName, info.compClassName,
+        if (JitConfig.JitNoProcedureSplitting().contains(info.compMethodHnd, info.compClassHnd,
                                                          &info.compMethodInfo->args))
         {
             opts.compProcedureSplitting = false;
         }
         //
         // JitNoProcedureSplittingEH will disable procedure splitting in functions with EH.
-        if (JitConfig.JitNoProcedureSplittingEH().contains(info.compMethodName, info.compClassName,
+        if (JitConfig.JitNoProcedureSplittingEH().contains(info.compMethodHnd, info.compClassHnd,
                                                            &info.compMethodInfo->args))
         {
             opts.compProcedureSplittingEH = false;
         }
 #endif
     }
+
+#ifdef TARGET_64BIT
+    opts.compCollect64BitCounts = JitConfig.JitCollect64BitCounts() != 0;
+
+#ifdef DEBUG
+    if (JitConfig.JitRandomlyCollect64BitCounts() != 0)
+    {
+        CLRRandom rng;
+        rng.Init(info.compMethodHash() ^ JitConfig.JitRandomlyCollect64BitCounts() ^ 0x3485e20e);
+        opts.compCollect64BitCounts = rng.Next(2) == 0;
+    }
+#endif
+#else
+    opts.compCollect64BitCounts = false;
+#endif
 
 #ifdef DEBUG
 
@@ -3306,7 +3308,7 @@ bool Compiler::compJitHaltMethod()
     /* This method returns true when we use an INS_BREAKPOINT to allow us to step into the generated native code */
     /* Note that this these two "Jit" environment variables also work for ngen images */
 
-    if (JitConfig.JitHalt().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+    if (JitConfig.JitHalt().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         return true;
     }
@@ -3410,7 +3412,7 @@ bool Compiler::compStressCompileHelper(compStressArea stressArea, unsigned weigh
     }
 
     if (!JitConfig.JitStressOnly().isEmpty() &&
-        !JitConfig.JitStressOnly().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        !JitConfig.JitStressOnly().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         return false;
     }
@@ -3693,7 +3695,7 @@ void Compiler::compSetOptimizationLevel()
 
     if (!theMinOptsValue)
     {
-        if (JitConfig.JitMinOptsName().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        if (JitConfig.JitMinOptsName().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
         {
             theMinOptsValue = true;
         }
@@ -4082,8 +4084,9 @@ bool Compiler::compRsvdRegCheck(FrameLayoutState curState)
 //
 const char* Compiler::compGetTieringName(bool wantShortName) const
 {
-    const bool tier0 = opts.jitFlags->IsSet(JitFlags::JIT_FLAG_TIER0);
-    const bool tier1 = opts.jitFlags->IsSet(JitFlags::JIT_FLAG_TIER1);
+    const bool tier0         = opts.jitFlags->IsSet(JitFlags::JIT_FLAG_TIER0);
+    const bool tier1         = opts.jitFlags->IsSet(JitFlags::JIT_FLAG_TIER1);
+    const bool instrumenting = opts.jitFlags->IsSet(JitFlags::JIT_FLAG_BBINSTR);
 
     if (!opts.compMinOptsIsSet)
     {
@@ -4097,13 +4100,13 @@ const char* Compiler::compGetTieringName(bool wantShortName) const
 
     if (tier0)
     {
-        return "Tier0";
+        return instrumenting ? "Instrumented Tier0" : "Tier0";
     }
     else if (tier1)
     {
         if (opts.jitFlags->IsSet(JitFlags::JIT_FLAG_OSR))
         {
-            return "Tier1-OSR";
+            return instrumenting ? "Instrumented Tier1-OSR" : "Tier1-OSR";
         }
         else
         {
@@ -4150,6 +4153,31 @@ const char* Compiler::compGetTieringName(bool wantShortName) const
 }
 
 //------------------------------------------------------------------------
+// compGetPgoSourceName: get a string describing PGO source
+//
+// Returns:
+//   String describing describing PGO source (e.g. Dynamic, Static, etc)
+//
+const char* Compiler::compGetPgoSourceName() const
+{
+    switch (fgPgoSource)
+    {
+        case ICorJitInfo::PgoSource::Static:
+            return "Static PGO";
+        case ICorJitInfo::PgoSource::Dynamic:
+            return "Dynamic PGO";
+        case ICorJitInfo::PgoSource::Blend:
+            return "Blend PGO";
+        case ICorJitInfo::PgoSource::Text:
+            return "Textual PGO";
+        case ICorJitInfo::PgoSource::Sampling:
+            return "Sample-based PGO";
+        default:
+            return "";
+    }
+}
+
+//------------------------------------------------------------------------
 // compGetStressMessage: get a string describing jitstress capability
 //   for this method
 //
@@ -4171,8 +4199,7 @@ const char* Compiler::compGetStressMessage() const
         {
             // Or is it excluded via name?
             if (!JitConfig.JitStressOnly().isEmpty() ||
-                !JitConfig.JitStressOnly().contains(info.compMethodName, info.compClassName,
-                                                    &info.compMethodInfo->args))
+                !JitConfig.JitStressOnly().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
             {
                 // Not excluded -- stress can happen
                 stressMessage = " JitStress";
@@ -5106,9 +5133,32 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
     compJitTelemetry.NotifyEndOfCompilation();
 #endif
 
-#if defined(DEBUG)
-    ++Compiler::jitTotalMethodCompiled;
-#endif // defined(DEBUG)
+    unsigned methodsCompiled = (unsigned)InterlockedIncrement((LONG*)&Compiler::jitTotalMethodCompiled);
+
+    if (JitConfig.JitDisasmSummary() && !compIsForInlining())
+    {
+        char osrBuffer[20] = {0};
+        if (opts.IsOSR())
+        {
+            // Tiering name already includes "OSR", we just want the IL offset
+            sprintf_s(osrBuffer, 20, " @0x%x", info.compILEntry);
+        }
+
+#ifdef DEBUG
+        const char* fullName = info.compFullName;
+#else
+        const char* fullName =
+            eeGetMethodFullName(info.compMethodHnd, /* includeReturnType */ false, /* includeThisSpecifier */ false);
+#endif
+
+        char debugPart[128] = {0};
+        INDEBUG(sprintf_s(debugPart, 128, ", hash=0x%08x%s", info.compMethodHash(), compGetStressMessage()));
+
+        const bool hasProf = fgHaveProfileData();
+        printf("%4d: JIT compiled %s [%s%s%s%s, IL size=%u, code size=%u%s]\n", methodsCompiled, fullName,
+               compGetTieringName(), osrBuffer, hasProf ? " with " : "", hasProf ? compGetPgoSourceName() : "",
+               info.compILCodeSize, *methodCodeSize, debugPart);
+    }
 
     compFunctionTraceEnd(*methodCodePtr, *methodCodeSize, false);
     JITDUMP("Method code size: %d\n", (unsigned)(*methodCodeSize));
@@ -5461,13 +5511,13 @@ bool Compiler::skipMethod()
         return true;
     }
 
-    if (JitConfig.JitExclude().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+    if (JitConfig.JitExclude().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         return true;
     }
 
     if (!JitConfig.JitInclude().isEmpty() &&
-        !JitConfig.JitInclude().contains(info.compMethodName, info.compClassName, &info.compMethodInfo->args))
+        !JitConfig.JitInclude().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
     {
         return true;
     }
@@ -5773,9 +5823,7 @@ int Compiler::compCompile(CORINFO_MODULE_HANDLE classPtr,
     {
         impTokenLookupContextHandle = impInlineInfo->tokenLookupContextHandle;
 
-        assert(impInlineInfo->inlineCandidateInfo->clsHandle == info.compCompHnd->getMethodClass(info.compMethodHnd));
-        info.compClassHnd = impInlineInfo->inlineCandidateInfo->clsHandle;
-
+        assert(impInlineInfo->inlineCandidateInfo->clsHandle == info.compClassHnd);
         assert(impInlineInfo->inlineCandidateInfo->clsAttr == info.compCompHnd->getClassAttribs(info.compClassHnd));
         // printf("%x != %x\n", impInlineInfo->inlineCandidateInfo->clsAttr,
         // info.compCompHnd->getClassAttribs(info.compClassHnd));
@@ -5785,7 +5833,6 @@ int Compiler::compCompile(CORINFO_MODULE_HANDLE classPtr,
     {
         impTokenLookupContextHandle = METHOD_BEING_COMPILED_CONTEXT();
 
-        info.compClassHnd  = info.compCompHnd->getMethodClass(info.compMethodHnd);
         info.compClassAttr = info.compCompHnd->getClassAttribs(info.compClassHnd);
     }
 
@@ -6710,24 +6757,6 @@ int Compiler::compCompileHelper(CORINFO_MODULE_HANDLE classPtr,
     }
 
 #ifdef DEBUG
-    if ((JitConfig.DumpJittedMethods() == 1) && !compIsForInlining())
-    {
-        enum
-        {
-            BUFSIZE = 20
-        };
-        char osrBuffer[BUFSIZE] = {0};
-        if (opts.IsOSR())
-        {
-            // Tiering name already includes "OSR", we just want the IL offset
-            //
-            sprintf_s(osrBuffer, BUFSIZE, " @0x%x", info.compILEntry);
-        }
-
-        printf("Compiling %4d %s::%s, IL size = %u, hash=0x%08x %s%s%s\n", Compiler::jitTotalMethodCompiled,
-               info.compClassName, info.compMethodName, info.compILCodeSize, info.compMethodHash(),
-               compGetTieringName(), osrBuffer, compGetStressMessage());
-    }
     if (compIsForInlining())
     {
         compGenTreeID   = impInlineInfo->InlinerCompiler->compGenTreeID;

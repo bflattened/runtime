@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 #nullable enable
@@ -25,6 +24,7 @@ namespace Wasm.Build.Tests
         public string                           LogRootPath                   { get; init; }
 
         public string                           WorkloadPacksDir              { get; init; }
+        public string                           BuiltNuGetsPath               { get; init; }
 
         public static readonly string           RelativeTestAssetsPath = @"..\testassets\";
         public static readonly string           TestAssetsPath = Path.Combine(AppContext.BaseDirectory, "testassets");
@@ -51,7 +51,7 @@ namespace Wasm.Build.Tests
                                                 "..",
                                                 "..",
                                                 "..",
-                                                "dotnet-workload");
+                                                "dotnet-net7");
                 if (Directory.Exists(probePath))
                     sdkForWorkloadPath = Path.GetFullPath(probePath);
                 else
@@ -99,6 +99,11 @@ namespace Wasm.Build.Tests
                 DirectoryBuildTargetsContents = s_directoryBuildTargetsForLocal;
             }
 
+            if (EnvironmentVariables.BuiltNuGetsPath is null || !Directory.Exists(EnvironmentVariables.BuiltNuGetsPath))
+                throw new Exception($"Cannot find 'BUILT_NUGETS_PATH={EnvironmentVariables.BuiltNuGetsPath}'");
+
+            BuiltNuGetsPath = EnvironmentVariables.BuiltNuGetsPath;
+
             // `runtime` repo's build environment sets these, and they
             // mess up the build for the test project, which is using a different
             // dotnet
@@ -111,6 +116,12 @@ namespace Wasm.Build.Tests
 
             // helps with debugging
             EnvVars["WasmNativeStrip"] = "false";
+
+            // Works around an issue in msbuild due to which
+            // second, and subsequent builds fail without any details
+            // in the logs
+            EnvVars["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
+            DefaultBuildArgs += " /nr:false";
 
             if (OperatingSystem.IsWindows())
             {

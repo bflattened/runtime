@@ -1425,7 +1425,7 @@ GenTree* Lowering::LowerFloatArg(GenTree** pArg, CallArg* callArg)
                     break;
                 }
                 GenTree* node = use.GetNode();
-                if (varTypeIsFloating(node))
+                if (varTypeUsesFloatReg(node))
                 {
                     GenTree* intNode = LowerFloatArgReg(node, currRegNumber);
                     assert(intNode != nullptr);
@@ -1447,7 +1447,7 @@ GenTree* Lowering::LowerFloatArg(GenTree** pArg, CallArg* callArg)
             // List fields were replaced in place.
             return arg;
         }
-        else if (varTypeIsFloating(arg))
+        else if (varTypeUsesFloatReg(arg))
         {
             GenTree* intNode = LowerFloatArgReg(arg, callArg->AbiInfo.GetRegNum());
             assert(intNode != nullptr);
@@ -1470,11 +1470,13 @@ GenTree* Lowering::LowerFloatArg(GenTree** pArg, CallArg* callArg)
 //
 GenTree* Lowering::LowerFloatArgReg(GenTree* arg, regNumber regNum)
 {
+    assert(varTypeUsesFloatReg(arg));
+
     var_types floatType = arg->TypeGet();
-    assert(varTypeIsFloating(floatType));
-    var_types intType = (floatType == TYP_DOUBLE) ? TYP_LONG : TYP_INT;
-    GenTree*  intArg  = comp->gtNewBitCastNode(intType, arg);
+    var_types intType   = (floatType == TYP_FLOAT) ? TYP_INT : TYP_LONG;
+    GenTree*  intArg    = comp->gtNewBitCastNode(intType, arg);
     intArg->SetRegNum(regNum);
+
 #ifdef TARGET_ARM
     if (floatType == TYP_DOUBLE)
     {
@@ -3819,6 +3821,11 @@ void Lowering::LowerCallStruct(GenTreeCall* call)
                 assert(user->TypeIs(origType) || (returnType == user->TypeGet()));
                 break;
 
+            case GT_CALL:
+                // Argument lowering will deal with register file mismatches if needed.
+                assert(varTypeIsSIMD(origType));
+                break;
+
             case GT_STOREIND:
 #ifdef FEATURE_SIMD
                 if (varTypeIsSIMD(user))
@@ -5345,28 +5352,43 @@ bool Lowering::TryCreateAddrMode(GenTree* addr, bool isContainable, GenTree* par
     }
 
 #ifdef TARGET_ARM64
-    if ((index != nullptr) && index->OperIs(GT_CAST) && (scale == 1) && (offset == 0) && varTypeIsByte(targetType))
+
+    if (index != nullptr)
     {
-        MakeSrcContained(addrMode, index);
-    }
-
-    // Check if we can "contain" LEA(BFIZ) in order to extend 32bit index to 64bit as part of load/store.
-    if ((index != nullptr) && index->OperIs(GT_BFIZ) && index->gtGetOp1()->OperIs(GT_CAST) &&
-        index->gtGetOp2()->IsCnsIntOrI() && !varTypeIsStruct(targetType))
-    {
-        // BFIZ node is a binary op where op1 is GT_CAST and op2 is GT_CNS_INT
-        GenTreeCast* cast = index->gtGetOp1()->AsCast();
-        assert(cast->isContained());
-
-        const unsigned shiftBy = (unsigned)index->gtGetOp2()->AsIntCon()->IconValue();
-
-        // 'scale' and 'offset' have to be unset since we're going to use [base + index * SXTW/UXTW scale] form
-        // where there is no room for additional offsets/scales on ARM64. 'shiftBy' has to match target's width.
-        if (cast->CastOp()->TypeIs(TYP_INT) && cast->TypeIs(TYP_LONG) && (genTypeSize(targetType) == (1U << shiftBy)) &&
-            (scale == 1) && (offset == 0))
+        if (index->OperIs(GT_CAST) && (scale == 1) && (offset == 0) && varTypeIsByte(targetType))
         {
-            // TODO: Make sure that genCreateAddrMode marks such BFIZ candidates as GTF_DONT_CSE for better CQ.
-            MakeSrcContained(addrMode, index);
+            if (IsSafeToContainMem(parent, index))
+            {
+                // Check containment safety against the parent node - this will ensure that LEA with the contained
+                // index will itself always be contained. We do not support uncontained LEAs with contained indices.
+                index->AsCast()->CastOp()->ClearContained(); // Uncontain any memory operands.
+                MakeSrcContained(addrMode, index);
+            }
+        }
+        else if (index->OperIs(GT_BFIZ) && index->gtGetOp1()->OperIs(GT_CAST) && index->gtGetOp2()->IsCnsIntOrI() &&
+                 !varTypeIsStruct(targetType))
+        {
+            // Check if we can "contain" LEA(BFIZ) in order to extend 32bit index to 64bit as part of load/store.
+            // BFIZ node is a binary op where op1 is GT_CAST and op2 is GT_CNS_INT
+            GenTreeCast* cast = index->gtGetOp1()->AsCast();
+            assert(cast->isContained());
+
+            const unsigned shiftBy = (unsigned)index->gtGetOp2()->AsIntCon()->IconValue();
+
+            // 'scale' and 'offset' have to be unset since we're going to use [base + index * SXTW/UXTW scale] form
+            // where there is no room for additional offsets/scales on ARM64. 'shiftBy' has to match target's width.
+            if (cast->CastOp()->TypeIs(TYP_INT) && cast->TypeIs(TYP_LONG) &&
+                (genTypeSize(targetType) == (1U << shiftBy)) && (scale == 1) && (offset == 0))
+            {
+                if (IsSafeToContainMem(parent, index))
+                {
+                    // Check containment safety against the parent node - this will ensure that LEA with the contained
+                    // index will itself always be contained. We do not support uncontained LEAs with contained indices.
+
+                    // TODO: Make sure that genCreateAddrMode marks such BFIZ candidates as GTF_DONT_CSE for better CQ.
+                    MakeSrcContained(addrMode, index);
+                }
+            }
         }
     }
 #endif
