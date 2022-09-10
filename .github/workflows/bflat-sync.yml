@@ -12,8 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
+        ref: 'bflat-${{ github.event.inputs.branch }}'
         fetch-depth: 0
     - name: Configure git
       run: |
