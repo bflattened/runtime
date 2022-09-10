@@ -118,7 +118,7 @@ jobs:
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' }}
         run: |
           mkdir artifacts/bflat-refs
-          cp -t artifacts/bflat-refs artifacts/bin/ref/net7.0/*.dll
+          cp -t artifacts/bflat-refs artifacts/bin/runtime/net7.0-linux-Release-x64/*.dll
           zip -jr artifacts/bflat-refs.zip artifacts/bflat-refs
           
       - name: Archive refs
