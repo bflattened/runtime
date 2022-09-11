@@ -113,11 +113,22 @@ jobs:
         with:
           name: libs
           path: artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
-          
+      
+      - name: ZIP refs
+        if: ${{ matrix.os == 'windows' && matrix.arch == 'x64' }}
+        run: |
+          mkdir artifacts/bflat-refs
+          dir artifacts/bin/runtime/net7.0-windows-Release-x64/
+          copy artifacts/bin/runtime/net7.0-windows-Release-x64/*.dll artifacts/bflat-refs/
+          pushd artifacts\bflat-refs\
+          Compress-Archive * $Env:GITHUB_WORKSPACE\artifacts\bflat-refs.zip
+          popd
+      
       - name: ZIP refs
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' }}
         run: |
           mkdir artifacts/bflat-refs
+          ls artifacts/bin/runtime/net7.0-Linux-Release-x64/
           cp -t artifacts/bflat-refs artifacts/bin/runtime/net7.0-Linux-Release-x64/*.dll
           zip -jr artifacts/bflat-refs.zip artifacts/bflat-refs
           
