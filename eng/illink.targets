@@ -163,7 +163,7 @@
                                                  .Replace('{AssemblyName}', '$(AssemblyName)')
                                                  .Replace('{StringResourcesName}', '$(StringResourcesName)'))"
                       Overwrite="true" />
-    <Exec Command="vim $(ILLinkResourcesSubstitutionIntermediatePath) -c &quot;set ff=dos&quot; -c &quot;:wq&quot;" Condition="'$(TargetOS)' != 'windows'" />
+    <Exec Command="sed -i 's/$/\r/' $(ILLinkResourcesSubstitutionIntermediatePath)" Condition="'$(TargetOS)' != 'windows'" />
     <ItemGroup>
       <FileWrites Include="$(ILLinkResourcesSubstitutionIntermediatePath)" />
     </ItemGroup>
