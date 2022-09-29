@@ -1045,7 +1045,8 @@ namespace ILCompiler.DependencyAnalysis
         {
             if (!relocsOnly && MightHaveInterfaceDispatchMap(factory))
             {
-                _optionalFieldsBuilder.SetFieldValue(EETypeOptionalFieldTag.DispatchMap, checked((uint)factory.InterfaceDispatchMapIndirection(Type).IndexFromBeginningOfArray));
+                TypeDesc canonType = _type.ConvertToCanonForm(CanonicalFormKind.Specific);
+                _optionalFieldsBuilder.SetFieldValue(EETypeOptionalFieldTag.DispatchMap, checked((uint)factory.InterfaceDispatchMapIndirection(canonType).IndexFromBeginningOfArray));
             }
 
             ComputeRareFlags(factory, relocsOnly);
