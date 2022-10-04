@@ -38,6 +38,15 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v1
+      
+      - name: Use CR-LF line endings to get same hashes on Linux
+        run: |
+          echo "* text=auto" > .git/info/attributes
+          echo "*.cs eol=crlf" >> .git/info/attributes
+          git rm -r .
+          git reset
+          git checkout .
+        if: ${{ matrix.vm == 'ubuntu-latest' }}
 
       - name: Build the product (Linux)
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
