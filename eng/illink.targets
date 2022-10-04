@@ -180,7 +180,8 @@
 
     <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkSubstitutionsXmls)"
                            CombinedLinkerXmlFile="$(ILLinkSubstitutionsXml)" />
-
+    <Exec Command="sed -i 's/$/\r/' $(ILLinkSubstitutionsXml)" Condition="'$(TargetOS)' != 'windows'" />
+    <Exec Command="truncate -s -1 $(ILLinkSubstitutionsXml)" Condition="'$(TargetOS)' != 'windows'" />
     <ItemGroup>
       <FileWrites Include="$(ILLinkSubstitutionsXml)" />
     </ItemGroup>
