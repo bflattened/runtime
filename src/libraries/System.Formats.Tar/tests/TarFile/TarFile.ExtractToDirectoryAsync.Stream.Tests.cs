@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,7 +45,7 @@ namespace System.Formats.Tar.Tests
             {
                 using (WrappedStream unreadable = new WrappedStream(archive, canRead: false, canWrite: true, canSeek: true))
                 {
-                    await Assert.ThrowsAsync<IOException>(() => TarFile.ExtractToDirectoryAsync(unreadable, destinationDirectoryName: "path", overwriteFiles: false));
+                    await Assert.ThrowsAsync<ArgumentException>(() => TarFile.ExtractToDirectoryAsync(unreadable, destinationDirectoryName: "path", overwriteFiles: false));
                 }
             }
         }
@@ -93,6 +94,19 @@ namespace System.Formats.Tar.Tests
                     Assert.True(Directory.Exists(Path.Join(root.Path, secondSegment)));
                     Assert.True(File.Exists(Path.Join(root.Path, fileWithTwoSegments)));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ExtractEntry_DockerImageTarWithFileTypeInDirectoriesInMode_SuccessfullyExtracts_Async()
+        {
+            using (TempDirectory root = new TempDirectory())
+            {
+                await using MemoryStream archiveStream = GetTarMemoryStream(CompressionMethod.Uncompressed, "golang_tar", "docker-hello-world");
+                await TarFile.ExtractToDirectoryAsync(archiveStream, root.Path, overwriteFiles: true);
+
+                Assert.True(File.Exists(Path.Join(root.Path, "manifest.json")));
+                Assert.True(File.Exists(Path.Join(root.Path, "repositories")));
             }
         }
 
@@ -173,6 +187,37 @@ namespace System.Formats.Tar.Tests
                     Assert.Equal(2, Directory.GetFileSystemEntries(baseDir).Count());
                 }
             }
+        }
+
+        [Theory]
+        [InlineData(512)]
+        [InlineData(512 + 1)]
+        [InlineData(512 + 512 - 1)]
+        public async Task Extract_UnseekableStream_BlockAlignmentPadding_DoesNotAffectNextEntries_Async(int contentSize)
+        {
+            byte[] fileContents = new byte[contentSize];
+            Array.Fill<byte>(fileContents, 0x1);
+
+            using var archive = new MemoryStream();
+            using (var compressor = new GZipStream(archive, CompressionMode.Compress, leaveOpen: true))
+            {
+                using var writer = new TarWriter(compressor);
+                var entry1 = new PaxTarEntry(TarEntryType.RegularFile, "file");
+                entry1.DataStream = new MemoryStream(fileContents);
+                await writer.WriteEntryAsync(entry1);
+
+                var entry2 = new PaxTarEntry(TarEntryType.RegularFile, "next-file");
+                await writer.WriteEntryAsync(entry2);
+            }
+
+            archive.Position = 0;
+            using var decompressor = new GZipStream(archive, CompressionMode.Decompress);
+            using var reader = new TarReader(decompressor);
+
+            using TempDirectory destination = new TempDirectory();
+            await TarFile.ExtractToDirectoryAsync(decompressor, destination.Path, overwriteFiles: true);
+
+            Assert.Equal(2, Directory.GetFileSystemEntries(destination.Path, "*", SearchOption.AllDirectories).Count());
         }
     }
 }
