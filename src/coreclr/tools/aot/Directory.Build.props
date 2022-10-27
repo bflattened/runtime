@@ -1,8 +1,6 @@
 <Project>
   <Import Project="../Directory.Build.props" />
   <PropertyGroup>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-    <NetCoreAppToolCurrent>net6.0</NetCoreAppToolCurrent>
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 </Project>

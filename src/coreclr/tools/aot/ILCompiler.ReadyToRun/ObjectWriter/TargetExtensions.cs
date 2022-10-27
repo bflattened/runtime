@@ -88,7 +88,7 @@ namespace ILCompiler.PEWriter
                     return Machine.ArmThumb2;
 
                 case Internal.TypeSystem.TargetArchitecture.LoongArch64:
-//                    return Machine.LoongArch64;
+                    return Machine.LoongArch64;
 
                 default:
                     throw new NotImplementedException(target.Architecture.ToString());

@@ -57,8 +57,20 @@ set(NATIVEGLOBALIZATION_SOURCES
     pal_localeNumberData.c
     pal_localeStringData.c
     pal_normalization.c
-    pal_icushim.c
 )
+
+if (LOCAL_BUILD)
+    set(NATIVEGLOBALIZATION_SOURCES ${NATIVEGLOBALIZATION_SOURCES} pal_icushim_static.c)
+    add_definitions(-DLOCAL_BUILD)
+    add_definitions(-DSTATIC_ICU)
+    add_definitions(-DPALEXPORT=EXTERN_C)
+    add_definitions(-DTARGET_UNIX)
+    # For minipal files
+    include_directories(../../)
+    include_directories(${CMAKE_CURRENT_BINARY_DIR})
+else()
+    set(NATIVEGLOBALIZATION_SOURCES ${NATIVEGLOBALIZATION_SOURCES} pal_icushim.c)
+endif()
 
 if (CLR_CMAKE_TARGET_OSX OR CLR_CMAKE_TARGET_MACCATALYST OR CLR_CMAKE_TARGET_IOS OR CLR_CMAKE_TARGET_TVOS)
     set(NATIVEGLOBALIZATION_SOURCES ${NATIVEGLOBALIZATION_SOURCES} pal_locale.m)
@@ -137,7 +149,6 @@ if(CLR_CMAKE_TARGET_WIN32)
         if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/RTC1")
           string(REPLACE "/RTC1" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
         endif()
-        add_compile_options(/Gs10000000)  # avoid __chkstk
         add_compile_options(/EHa-)
         add_compile_options(/GS-)
         add_compile_options(/Zl)
