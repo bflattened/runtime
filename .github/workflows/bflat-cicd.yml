@@ -27,6 +27,13 @@ jobs:
             container: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-20210714125435-9b5bbc2
             arch: x64
             vm: ubuntu-latest
+            components: clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs
+          - os: linux-bionic
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-android-20220628174908-5789942
+            arch: arm64
+            extraArgs: /p:RuntimeOS=linux-bionic /p:OutputRid=linux-bionic-arm64 /p:CrossBuild=false /p:RuntimeFlavor=CoreCLR /p:TestNativeAot=true
+            vm: ubuntu-latest
+            components: clr.nativeaotlibs+clr.nativeaotruntime+libs
           - os: windows
             arch: x64
             vm: windows-latest
@@ -40,7 +47,9 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Build the product (Linux)
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
+        env:
+          TARGET_BUILD_ARCH: ${{ matrix.arch }}
+        run: ./build.sh ${{ matrix.components }} -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" ${{ matrix.extraArgs }}
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
       - name: Build the product (Linux cross)
         env:
@@ -69,7 +78,7 @@ jobs:
           cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
           cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
           zip -jr artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
-        if: ${{ matrix.vm == 'ubuntu-latest' }}
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
       - name: ZIP native compiler (Windows)
         run: |
           mkdir artifacts\bflat-compiler-native
@@ -88,7 +97,17 @@ jobs:
         with:
           name: native-compiler
           path: artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
+        if: ${{ matrix.os != 'linux-bionic' }}
 
+      - name: ZIP libs (Bionic)
+        run: |
+          mkdir artifacts/bflat-libs
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-bionic-${{ matrix.arch }}/Release/runtimes/linux-bionic-${{ matrix.arch }}/lib/net7.0/*
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-bionic-${{ matrix.arch }}/Release/runtimes/linux-bionic-${{ matrix.arch }}/native/*.Native.*a
+          cp -t artifacts/bflat-libs artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/aotsdk/*
+          cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux-bionic.${{ matrix.arch }}.Release/aotsdk/*
+          zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
+        if: ${{ matrix.os == 'linux-bionic' }}
       - name: ZIP libs (Linux)
         run: |
           mkdir artifacts/bflat-libs
@@ -96,7 +115,7 @@ jobs:
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/native/*.Native.*a
           cp -t artifacts/bflat-libs artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/aotsdk/*
           zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
-        if: ${{ matrix.vm == 'ubuntu-latest' }}
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
       - name: ZIP libs (Windows)
         run: |
           mkdir artifacts\bflat-libs
