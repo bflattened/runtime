@@ -1,5 +1,10 @@
 <Project>
   <PropertyGroup>
+    <!-- Minimum version of the Android API level we target, keep in sync with eng/native/build-commons.sh -->
+    <AndroidApiLevelMin>21</AndroidApiLevelMin>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <InferPlatformFromTargetArchitecture>true</InferPlatformFromTargetArchitecture>
 
     <!-- TODO: Clean-up casing and remove __BuildType to remove this block. -->

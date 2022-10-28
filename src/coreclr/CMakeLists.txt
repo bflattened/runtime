@@ -67,9 +67,9 @@ include(components.cmake)
 # Build the single file host
 #---------------------------
 if(NOT CLR_CROSS_COMPONENTS_BUILD)
-  set(CLR_SINGLE_FILE_HOST_ONLY 1)
-  add_subdirectory(${CLR_SRC_NATIVE_DIR}/corehost/apphost/static Corehost.Static)
-  add_dependencies(runtime singlefilehost)
+#  set(CLR_SINGLE_FILE_HOST_ONLY 1)
+#  add_subdirectory(${CLR_SRC_NATIVE_DIR}/corehost/apphost/static Corehost.Static)
+#  add_dependencies(runtime singlefilehost)
 endif()
 #-------------------------
 # Enable C++ EH with SEH
@@ -94,15 +94,15 @@ endif(NOT CLR_CROSS_COMPONENTS_BUILD)
 #-----------------------------------------
 if(CLR_CMAKE_HOST_UNIX)
     if(CLR_CMAKE_TARGET_ANDROID)
-        find_library(LZMA NAMES lzma)
-        if(LZMA STREQUAL LZMA-NOTFOUND)
-           message(FATAL_ERROR "Cannot find liblzma.")
-        endif(LZMA STREQUAL LZMA-NOTFOUND)
+#        find_library(LZMA NAMES lzma)
+#        if(LZMA STREQUAL LZMA-NOTFOUND)
+#           message(FATAL_ERROR "Cannot find liblzma.")
+#        endif(LZMA STREQUAL LZMA-NOTFOUND)
 
-        find_library(ANDROID_GLOB NAMES android-glob)
-        if(ANDROID_GLOB STREQUAL ANDROID_GLOB-NOTFOUND)
-          message(FATAL_ERROR "Cannot find android-glob.")
-        endif()
+#        find_library(ANDROID_GLOB NAMES android-glob)
+#        if(ANDROID_GLOB STREQUAL ANDROID_GLOB-NOTFOUND)
+#          message(FATAL_ERROR "Cannot find android-glob.")
+#        endif()
     endif()
 
     add_subdirectory(pal)

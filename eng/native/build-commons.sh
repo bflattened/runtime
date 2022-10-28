@@ -102,6 +102,8 @@ build_native()
             echo "Error: Unknown Android architecture $hostArch."
             exit 1
         fi
+
+        cmakeArgs="-C $__RepoRootDir/eng/native/tryrun.cmake $cmakeArgs"
     fi
 
     if [[ "$__UseNinja" == 1 ]]; then
