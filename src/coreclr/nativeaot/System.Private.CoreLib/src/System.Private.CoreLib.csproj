@@ -597,8 +597,14 @@
       <Link>Common\TransitionBlock.cs</Link>
     </Compile>
   </ItemGroup>
+
+  <PropertyGroup>
+    <_AsmOffsetsDir>$(IntermediatesDir)\nativeaot\Runtime\Full\</_AsmOffsetsDir>
+    <_AsmOffsetsDir Condition="'$(TargetsLinuxBionic)' == 'true'">$(ArtifactsDir)\obj\coreclr\linux-bionic.arm64.Release\nativeaot\Runtime\Full\</_AsmOffsetsDir>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(InPlaceRuntime)' == 'true'">
-    <Compile Include="$(IntermediatesDir)\nativeaot\Runtime\Full\AsmOffsets.cs" />
+    <Compile Include="$(_AsmOffsetsDir)AsmOffsets.cs" />
   </ItemGroup>
 
   <Import Project="$(LibrariesProjectRoot)\System.Private.CoreLib\src\System.Private.CoreLib.Shared.projitems" Label="Shared" />
