@@ -293,3 +293,13 @@ jobs:
           asset_path: libs/bflat-libs-linux-glibc-arm64.zip
           asset_name: bflat-libs-linux-glibc-arm64.zip
           asset_content_type: application/zip
+
+      - name: Upload libs (linux-bionic-arm64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: libs/bflat-libs-linux-bionic-arm64.zip
+          asset_name: bflat-libs-linux-bionic-arm64.zip
+          asset_content_type: application/zip
