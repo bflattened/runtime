@@ -40,16 +40,16 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Build the product (Linux)
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
       - name: Build the product (Linux cross)
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
       - name: Build the product (Windows)
         shell: cmd
-        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}"
+        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'windows-latest' }}
 
       - name: Package compiler
@@ -101,7 +101,6 @@ jobs:
         run: |
           mkdir artifacts\bflat-libs
           copy artifacts\bin\microsoft.netcore.app.runtime.win-${{ matrix.arch }}\Release\runtimes\win-${{ matrix.arch }}\lib\net7.0\* artifacts\bflat-libs\
-          copy artifacts\bin\microsoft.netcore.app.runtime.win-${{ matrix.arch }}\Release\runtimes\win-${{ matrix.arch }}\native\*Native-Static.lib artifacts\bflat-libs\
           copy artifacts\bin\coreclr\Windows.${{ matrix.arch }}.Release\aotsdk\* artifacts\bflat-libs\
           pushd artifacts\bflat-libs\
           Compress-Archive * $Env:GITHUB_WORKSPACE\artifacts\bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
