@@ -23,26 +23,21 @@ namespace ILCompiler.DependencyAnalysis
         internal static readonly string WindowsSectionName = ".unbox$M";
         internal static readonly string UnixSectionName = "__unbox";
 
-        private readonly TargetDetails _targetDetails;
-
         public MethodDesc Method { get; }
 
-        public override ObjectNodeSection Section
+        public override ObjectNodeSection GetSection(NodeFactory factory)
         {
-            get
-            {
-                string sectionName = _targetDetails.IsWindows ? WindowsSectionName : UnixSectionName;
-                return new ObjectNodeSection(sectionName, SectionType.Executable);
-            }
+            string sectionName = factory.Target.IsWindows ? WindowsSectionName : UnixSectionName;
+            return new ObjectNodeSection(sectionName, SectionType.Executable);
         }
+
         public override bool IsShareable => true;
 
-        public UnboxingStubNode(MethodDesc target, TargetDetails targetDetails)
+        public UnboxingStubNode(MethodDesc target)
         {
             Debug.Assert(target.GetCanonMethodTarget(CanonicalFormKind.Specific) == target);
             Debug.Assert(target.OwningType.IsValueType);
             Method = target;
-            _targetDetails = targetDetails;
         }
 
         private ISymbolNode GetUnderlyingMethodEntrypoint(NodeFactory factory)

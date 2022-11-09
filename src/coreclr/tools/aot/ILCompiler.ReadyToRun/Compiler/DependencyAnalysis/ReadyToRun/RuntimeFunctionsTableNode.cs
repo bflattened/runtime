@@ -19,7 +19,6 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         private int _tableSize = -1;
 
         public RuntimeFunctionsTableNode(NodeFactory nodeFactory)
-            : base(nodeFactory.Target)
         {
             _nodeFactory = nodeFactory;
         }

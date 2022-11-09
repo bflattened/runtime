@@ -29,12 +29,6 @@ namespace ILCompiler.DependencyAnalysis
         }
 
         List<HeaderItem> _items = new List<HeaderItem>();
-        TargetDetails _target;
-
-        public ReadyToRunHeaderNode(TargetDetails target)
-        {
-            _target = target;
-        }
 
         public void Add(ReadyToRunSectionType id, ObjectNode node, ISymbolNode startSymbol, ISymbolNode endSymbol = null)
         {
@@ -53,15 +47,12 @@ namespace ILCompiler.DependencyAnalysis
 
         public override bool StaticDependenciesAreComputed => true;
 
-        public override ObjectNodeSection Section
+        public override ObjectNodeSection GetSection(NodeFactory factory)
         {
-            get
-            {
-                if (_target.IsWindows)
-                    return ObjectNodeSection.ReadOnlyDataSection;
-                else
-                    return ObjectNodeSection.DataSection;
-            }
+            if (factory.Target.IsWindows)
+                return ObjectNodeSection.ReadOnlyDataSection;
+            else
+                return ObjectNodeSection.DataSection;
         }
 
         public override ObjectData GetData(NodeFactory factory, bool relocsOnly = false)

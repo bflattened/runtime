@@ -4,7 +4,6 @@
 using System;
 
 using Internal.Text;
-using Internal.TypeSystem;
 
 namespace ILCompiler.DependencyAnalysis
 {
@@ -17,22 +16,11 @@ namespace ILCompiler.DependencyAnalysis
         public static readonly string WindowsSectionName = ".modules$I";
         public static readonly string UnixSectionName = "__modules";
 
-        private TargetDetails _target;
-
-        public ModulesSectionNode(TargetDetails target)
+        public override ObjectNodeSection GetSection(NodeFactory factory)
         {
-            _target = target;
-        }
-
-        public override ObjectNodeSection Section
-        {
-            get
-            {
-                if (_target.IsWindows)
-                    return new ObjectNodeSection(WindowsSectionName, SectionType.ReadOnly);
-                else
-                    return new ObjectNodeSection(UnixSectionName, SectionType.Writeable);
-            }
+            return factory.Target.IsWindows ?
+                ObjectNodeSection.ModulesWindowsContentSection :
+                ObjectNodeSection.ModulesUnixContentSection;
         }
 
         protected override string GetName(NodeFactory factory) => this.GetMangledName(factory.NameMangler);

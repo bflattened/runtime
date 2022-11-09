@@ -298,7 +298,7 @@ namespace ILCompiler.DependencyAnalysis
                         }
                     }
 
-                    EmitObjectData(r2rPeBuilder, nodeContents, nodeIndex, name, node.Section);
+                    EmitObjectData(r2rPeBuilder, nodeContents, nodeIndex, name, node.GetSection(_nodeFactory));
                     lastWrittenObjectNode = node;
 
                     if (_outputInfoBuilder != null && node is MethodWithGCInfo methodNode)
