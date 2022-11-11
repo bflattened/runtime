@@ -299,6 +299,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="$(_subset.Contains('+clr.tools+'))">
+    <ProjectToBuild Include="$(CoreClrProjectRoot)tools\aot\ObjWriter\objwriter.proj" Category="clr" />
     <ProjectToBuild Include="$(CoreClrProjectRoot)tools\runincontext\runincontext.csproj;
                              $(CoreClrProjectRoot)tools\tieringtest\tieringtest.csproj;
                              $(CoreClrProjectRoot)tools\r2rdump\R2RDump.csproj;
