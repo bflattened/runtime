@@ -152,6 +152,7 @@ jobs:
           rmdir /S /Q artifacts\bflat-libs
           rmdir /S /Q artifacts\bflat-compiler-native
           rmdir /S /Q artifacts\obj\coreclr
+          rmdir /S /Q artifacts\llvm-project
           del artifacts\bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
           del artifacts\bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
