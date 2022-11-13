@@ -138,12 +138,14 @@ namespace ILCompiler.DependencyAnalysis
 
         public void InitializeGCInfo(byte[] gcInfo)
         {
+            if (!SettingsTunnel.EmitGCInfo) return;
             Debug.Assert(_gcInfo == null);
             _gcInfo = gcInfo;
         }
 
         public void InitializeEHInfo(ObjectData ehInfo)
         {
+            if (!SettingsTunnel.EmitEHInfo) return;
             Debug.Assert(_ehInfo == null);
             if (ehInfo != null)
                 _ehInfo = new MethodExceptionHandlingInfoNode(_method, ehInfo);

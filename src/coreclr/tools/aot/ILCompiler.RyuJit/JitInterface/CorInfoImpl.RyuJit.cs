@@ -1889,6 +1889,20 @@ namespace Internal.JitInterface
 
         private void getGSCookie(IntPtr* pCookieVal, IntPtr** ppCookieVal)
         {
+            if (!SettingsTunnel.EmitGSCookies)
+            {
+                if (PointerSize == 4)
+                {
+                    *pCookieVal = (IntPtr)0x3F796857;
+                }
+                else
+                {
+                    *pCookieVal = unchecked((IntPtr)0x216D6F6D202C6948);
+                }
+                *ppCookieVal = null;
+                return;
+            }
+
             if (ppCookieVal != null)
             {
                 *ppCookieVal = (IntPtr*)ObjectToHandle(_compilation.NodeFactory.ExternSymbol("__security_cookie"));
