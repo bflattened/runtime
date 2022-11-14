@@ -20,6 +20,13 @@ using Debug = System.Diagnostics.Debug;
 
 namespace ILCompiler
 {
+    public static class SettingsTunnel
+    {
+        public static bool EmitGSCookies = true;
+        public static bool EmitGCInfo = true;
+        public static bool EmitEHInfo = true;
+    }
+
     public abstract class Compilation : ICompilation
     {
         protected readonly DependencyAnalyzerBase<NodeFactory> _dependencyGraph;
