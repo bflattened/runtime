@@ -1891,14 +1891,7 @@ namespace Internal.JitInterface
         {
             if (!SettingsTunnel.EmitGSCookies)
             {
-                if (PointerSize == 4)
-                {
-                    *pCookieVal = (IntPtr)0x3F796857;
-                }
-                else
-                {
-                    *pCookieVal = unchecked((IntPtr)0x216D6F6D202C6948);
-                }
+                *pCookieVal = (IntPtr)0x3F796857;
                 *ppCookieVal = null;
                 return;
             }
