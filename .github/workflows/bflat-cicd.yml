@@ -191,7 +191,9 @@ jobs:
         uses: actions/download-artifact@v2
           
       - name: Publish compiler package
-        run: ./dotnet.sh nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg -s https://nuget.pkg.github.com/bflattened/index.json --api-key ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./dotnet.sh nuget add source --username USERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/bflattened/index.json"
+          ./dotnet.sh nuget push nuget/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg --source "github"
 
       - name: Create Release
         id: create_release
