@@ -61,6 +61,7 @@ namespace ILCompiler
         private string _reflectionData;
         private bool _completeTypesMetadata;
         private bool _scanReflection;
+        private bool _dehydrate;
         private bool _methodBodyFolding;
         private int _parallelism = Environment.ProcessorCount;
         private string _instructionSet;
@@ -216,6 +217,7 @@ namespace ILCompiler
                 syntax.DefineOption("completetypemetadata", ref _completeTypesMetadata, "Generate complete metadata for types");
                 syntax.DefineOption("reflectiondata", ref _reflectionData, $"Reflection data to generate (one of: {string.Join(", ", validReflectionDataOptions)})");
                 syntax.DefineOption("scanreflection", ref _scanReflection, "Scan IL for reflection patterns");
+                syntax.DefineOption("dehydrate", ref _dehydrate, "Dehydrate");
                 syntax.DefineOption("scan", ref _useScanner, "Use IL scanner to generate optimized code (implied by -O)");
                 syntax.DefineOption("noscan", ref _noScanner, "Do not use IL scanner to generate optimized code");
                 syntax.DefineOption("ildump", ref _ilDump, "Dump IL assembly listing for compiler-generated IL");
@@ -817,6 +819,10 @@ namespace ILCompiler
 
             var flowAnnotations = new ILLink.Shared.TrimAnalysis.FlowAnnotations(logger, ilProvider, compilerGeneratedState);
 
+            MetadataManagerOptions metadataOptions = default;
+            if (_dehydrate)
+                metadataOptions |= MetadataManagerOptions.DehydrateData;
+
             MetadataManager metadataManager = new UsageBasedMetadataManager(
                     compilationGroup,
                     typeSystemContext,
@@ -827,6 +833,7 @@ namespace ILCompiler
                     invokeThunkGenerationPolicy,
                     flowAnnotations,
                     metadataGenerationOptions,
+                    metadataOptions,
                     logger,
                     featureSwitches,
                     _conditionallyRootedAssemblies.Concat(_rootedAssemblies),
