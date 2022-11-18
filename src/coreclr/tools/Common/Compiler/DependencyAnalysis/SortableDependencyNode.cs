@@ -43,7 +43,8 @@ namespace ILCompiler.DependencyAnalysis
             /// affect compiler correctness. Today that includes native layout tables.
             /// </summary>
             Ordered,
-            Unordered
+            Unordered,
+            Late,
         }
 
         protected enum ObjectNodeOrder

@@ -9,7 +9,7 @@ using Internal.TypeSystem;
 
 namespace ILCompiler.DependencyAnalysis
 {
-    public class RuntimeMethodHandleNode : ObjectNode, ISymbolDefinitionNode
+    public class RuntimeMethodHandleNode : DehydratableObjectNode, ISymbolDefinitionNode
     {
         private MethodDesc _targetMethod;
 
@@ -37,7 +37,7 @@ namespace ILCompiler.DependencyAnalysis
         public override bool IsShareable => false;
         public override bool StaticDependenciesAreComputed => true;
 
-        public override ObjectNodeSection GetSection(NodeFactory factory)
+        protected override ObjectNodeSection GetDehydratedSection(NodeFactory factory)
         {
             if (factory.Target.IsWindows)
                 return ObjectNodeSection.ReadOnlyDataSection;
@@ -63,7 +63,7 @@ namespace ILCompiler.DependencyAnalysis
 
         private static Utf8String s_NativeLayoutSignaturePrefix = new Utf8String("__RMHSignature_");
 
-        public override ObjectData GetData(NodeFactory factory, bool relocsOnly = false)
+        protected override ObjectData GetDehydratableData(NodeFactory factory, bool relocsOnly = false)
         {
             ObjectDataBuilder objData = new ObjectDataBuilder(factory, relocsOnly);
 
