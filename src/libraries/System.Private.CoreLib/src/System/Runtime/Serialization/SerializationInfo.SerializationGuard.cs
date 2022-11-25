@@ -10,6 +10,7 @@ namespace System.Runtime.Serialization
     /// <summary>The structure for holding all of the data needed for object serialization and deserialization.</summary>
     public sealed partial class SerializationInfo
     {
+#pragma warning disable IDE0060
         internal static void ThrowIfDeserializationInProgress() { }
         internal static void ThrowIfDeserializationInProgress(string switchSuffix, ref int cachedValue) { }
         public static DeserializationToken StartDeserialization() => new DeserializationToken(null);
