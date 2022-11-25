@@ -1,0 +1,50 @@
+name: Sync from dotnet/runtime repo
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch (ex: main, release/7.0)'
+        required: true
+
+jobs:
+  sync:
+    if: ${{ github.actor == 'MichalStrehovsky' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Configure git
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git remote add dotnet https://github.com/dotnet/runtime.git
+    - name: Create branch
+      run: git checkout -b merge-${{ github.event.inputs.branch }}
+    - name: Merge from dotnet
+      run: git pull --ff dotnet ${{ github.event.inputs.branch }}
+    - name: Move any unrelated files under .github
+      run: |
+        rsync -rv --include '*/' --exclude 'workflows/bflat*' --remove-source-files .github/ .gh-original/
+        git add \*
+        git diff-index --quiet HEAD || something_moved=$?
+        if [ -n "$something_moved" ]
+        then
+          echo Got new files we need to move
+          git commit -m "Move added files"
+        fi
+    - name: Check if branch already exists
+      continue-on-error: true
+      id: branch_exists
+      run: git ls-remote --exit-code --heads origin merge-${{ github.event.inputs.branch }}
+    - name: Push
+      run: git push --force --set-upstream origin HEAD:merge-${{ github.event.inputs.branch }}
+    - name: Create pull request
+      if: steps.branch_exists.outcome != 'success'
+      uses: ./bflat/actions/pullrequest
+      with:
+        auth_token: ${{ secrets.GITHUB_TOKEN }}
+        source_branch: merge-${{ github.event.inputs.branch }}
+        target_branch: bflat-${{ github.event.inputs.branch }}
+        pr_title: '[${{ github.event.inputs.branch }}] Merge from dotnet/runtime'
