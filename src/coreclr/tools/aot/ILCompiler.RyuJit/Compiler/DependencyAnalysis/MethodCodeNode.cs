@@ -140,7 +140,6 @@ namespace ILCompiler.DependencyAnalysis
 
         public void InitializeGCInfo(byte[] gcInfo)
         {
-            if (!SettingsTunnel.EmitGCInfo) return;
             Debug.Assert(_gcInfo == null);
             _gcInfo = gcInfo;
         }
