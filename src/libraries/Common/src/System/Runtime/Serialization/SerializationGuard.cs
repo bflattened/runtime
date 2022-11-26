@@ -10,6 +10,7 @@ namespace System.Runtime.Serialization
     /// </summary>
     internal static partial class SerializationGuard
     {
+#pragma warning disable IDE0060
         public static void ThrowIfDeserializationInProgress(string switchSuffix, ref int cachedValue)
         {
         }
