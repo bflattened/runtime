@@ -514,7 +514,7 @@ namespace ILCompiler.DependencyAnalysis
                 return;
             }
 
-            byte[] gcInfo = nodeWithCodeInfo.GCInfo;
+            byte[] gcInfo = SettingsTunnel.EmitGCInfo ? nodeWithCodeInfo.GCInfo : null;
             MethodExceptionHandlingInfoNode ehInfo = nodeWithCodeInfo.EHInfo;
             ISymbolNode associatedDataNode = nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory);
 
@@ -595,7 +595,7 @@ namespace ILCompiler.DependencyAnalysis
                 return;
             }
 
-            byte[] gcInfo = nodeWithCodeInfo.GCInfo;
+            byte[] gcInfo = SettingsTunnel.EmitGCInfo ? nodeWithCodeInfo.GCInfo : null;
             MethodExceptionHandlingInfoNode ehInfo = nodeWithCodeInfo.EHInfo;
             ISymbolNode associatedDataNode = nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory);
 
