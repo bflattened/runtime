@@ -19,8 +19,8 @@ namespace ILCompiler.DependencyAnalysis
         public override ObjectNodeSection GetSection(NodeFactory factory)
         {
             return factory.Target.IsWindows ?
-                ObjectNodeSection.ModulesWindowsContentSection :
-                ObjectNodeSection.ModulesUnixContentSection;
+                new ObjectNodeSection(WindowsSectionName, SectionType.ReadOnly) :
+                new ObjectNodeSection(UnixSectionName, SectionType.Writeable);
         }
 
         protected override string GetName(NodeFactory factory) => this.GetMangledName(factory.NameMangler);
