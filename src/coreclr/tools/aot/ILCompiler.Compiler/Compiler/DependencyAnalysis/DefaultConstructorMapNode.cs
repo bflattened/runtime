@@ -37,7 +37,7 @@ namespace ILCompiler.DependencyAnalysis
 
         public int Offset => 0;
         public override bool IsShareable => false;
-        public override ObjectNodeSection Section => _externalReferences.Section;
+        public override ObjectNodeSection GetSection(NodeFactory factory) => _externalReferences.GetSection(factory);
         public override bool ShouldSkipEmittingObjectNode(NodeFactory factory) => false;
         public override bool StaticDependenciesAreComputed => true;
 

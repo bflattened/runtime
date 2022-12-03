@@ -19,7 +19,6 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         private int _tableSize = -1;
 
         public RuntimeFunctionsTableNode(NodeFactory nodeFactory)
-            : base(nodeFactory.Target)
         {
             _nodeFactory = nodeFactory;
         }
@@ -82,13 +81,13 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
 
                     // StartOffset of the runtime function
                     int codeDelta = 0;
-                    if (Target.Architecture == TargetArchitecture.ARM)
+                    if (factory.Target.Architecture == TargetArchitecture.ARM)
                     {
                         // THUMB_CODE
                         codeDelta = 1;
                     }
                     runtimeFunctionsBuilder.EmitReloc(method, RelocType.IMAGE_REL_BASED_ADDR32NB, delta: frameInfo.StartOffset + codeDelta);
-                    if (!relocsOnly && Target.Architecture == TargetArchitecture.X64)
+                    if (!relocsOnly && factory.Target.Architecture == TargetArchitecture.X64)
                     {
                         // On Amd64, the 2nd word contains the EndOffset of the runtime function
                         runtimeFunctionsBuilder.EmitReloc(method, RelocType.IMAGE_REL_BASED_ADDR32NB, delta: frameInfo.EndOffset);
