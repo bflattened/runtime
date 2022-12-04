@@ -510,10 +510,10 @@ namespace ILCompiler.DependencyAnalysis
             }
 
             FrameInfo[] frameInfos = nodeWithCodeInfo.FrameInfos;
-            if (frameInfos == null)
+            if (frameInfos == null || !SettingsTunnel.EmitUnwindInfo)
             {
                 // Data should only be present if the method has unwind info
-                Debug.Assert(nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory) == null);
+                Debug.Assert(!SettingsTunnel.EmitUnwindInfo || nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory) == null);
 
                 return;
             }
@@ -591,10 +591,10 @@ namespace ILCompiler.DependencyAnalysis
             }
 
             FrameInfo[] frameInfos = nodeWithCodeInfo.FrameInfos;
-            if (frameInfos == null)
+            if (frameInfos == null || !SettingsTunnel.EmitUnwindInfo)
             {
                 // Data should only be present if the method has unwind info
-                Debug.Assert(nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory) == null);
+                Debug.Assert(!SettingsTunnel.EmitUnwindInfo || nodeWithCodeInfo.GetAssociatedDataNode(_nodeFactory) == null);
 
                 return;
             }
