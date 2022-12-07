@@ -74,6 +74,7 @@ set "ExtraCMakeArgs=%~3"
     -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86" ^
     -DLLVM_USE_CRT_DEBUG=MTd ^
     -DLLVM_USE_CRT_RELEASE=MT ^
+    -DLLVM_ENABLE_ZLIB=0 ^
     || goto Error
 
 echo Executing "%CMakePath%" --build "build\%Arch%" --config %BuildType% --target %Target% -- -m
