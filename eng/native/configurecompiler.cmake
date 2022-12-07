@@ -372,6 +372,7 @@ endif ()
 if (CLR_CMAKE_HOST_UNIX)
   # Disable frame pointer optimizations so profilers can get better call stacks
   add_compile_options(-fno-omit-frame-pointer)
+  add_compile_options(-ffunction-sections)
 
   # The -fms-extensions enable the stuff like __if_exists, __declspec(uuid()), etc.
   add_compile_options(-fms-extensions)
