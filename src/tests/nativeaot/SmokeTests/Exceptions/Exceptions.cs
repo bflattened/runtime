@@ -26,8 +26,8 @@ public class BringUpTest
     public static int Main()
     {
         // This test also doubles as server GC test
-        if (!System.Runtime.GCSettings.IsServerGC)
-            return 42;
+//        if (!System.Runtime.GCSettings.IsServerGC)
+//            return 42;
 
         if (string.Empty.Length > 0)
         {
