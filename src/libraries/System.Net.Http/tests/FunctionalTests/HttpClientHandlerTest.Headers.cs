@@ -135,7 +135,7 @@ namespace System.Net.Http.Functional.Tests
         [Theory]
         [InlineData("\u05D1\u05F1")]
         [InlineData("jp\u30A5")]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/54160", TestPlatforms.Browser)]
+        [SkipOnPlatform(TestPlatforms.Browser, "Browser is relaxed about validating HTTP headers")]
         public async Task SendAsync_InvalidCharactersInHeader_Throw(string value)
         {
             await LoopbackServerFactory.CreateClientAndServerAsync(async uri =>
@@ -215,7 +215,7 @@ namespace System.Net.Http.Functional.Tests
         public async Task GetAsync_LargeHeader_Success(string headerName, int headerValueLength)
         {
             var rand = new Random(42);
-            string headerValue = string.Concat(Enumerable.Range(0, headerValueLength).Select(_ => (char)('A' + rand.Next(26))));
+            string headerValue = new string(rand.GetItems<char>("ABCDEFGHIJKLMNOPQRSTUVWXYZ", headerValueLength));
 
             const string ContentString = "hello world";
             await LoopbackServerFactory.CreateClientAndServerAsync(async uri =>
@@ -402,7 +402,7 @@ namespace System.Net.Http.Functional.Tests
         }
 
         [Fact]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/54160", TestPlatforms.Browser)]
+        [SkipOnPlatform(TestPlatforms.Browser, "Browser is relaxed about validating HTTP headers")]
         public async Task SendAsync_WithZeroLengthHeaderName_Throws()
         {
             await LoopbackServerFactory.CreateClientAndServerAsync(

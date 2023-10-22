@@ -19,15 +19,16 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <dlfcn.h>
+
+#import "util.h"
 
 static char *bundle_path;
+static bool pinvoke_override_enabled = false;
 
 #define APPLE_RUNTIME_IDENTIFIER "//%APPLE_RUNTIME_IDENTIFIER%"
 
 #define RUNTIMECONFIG_BIN_FILE "runtimeconfig.bin"
-
-// XHarness is looking for this tag in app's output to determine the exit code
-#define EXIT_CODE_TAG "DOTNET.APP_EXIT_CODE"
 
 const char *
 get_bundle_path (void)
@@ -117,7 +118,7 @@ load_assembly (const char *name, const char *culture)
 
     os_log_info (OS_LOG_DEFAULT, "assembly_preload_hook: %{public}s %{public}s %{public}s\n", name, culture, bundle);
 
-    int len = strlen (name);
+    unsigned long len = strlen (name);
     int has_extension = len > 3 && name [len - 4] == '.' && (!strcmp ("exe", name + (len - 3)) || !strcmp ("dll", name + (len - 3)));
 
     // add extensions if required.
@@ -217,10 +218,28 @@ log_callback (const char *log_domain, const char *log_level, const char *message
     }
 }
 
-static void
-register_dllmap (void)
+static bool is_pinvoke_override_library (const char* libraryName)
 {
-//%DllMap%
+    const char *libraries [] = {
+        "__Internal",
+//%PInvokeOverrideLibraries%
+    };
+
+    for (int i = 0; i < sizeof(libraries) / sizeof(libraries[0]); i++) {
+        if (!strcmp (libraryName, libraries [i]))
+            return true;
+    }
+
+    return false;
+}
+
+void*
+handle_pinvoke_override (const char *libraryName, const char *entrypointName)
+{
+    if (pinvoke_override_enabled && is_pinvoke_override_library (libraryName))
+        return dlsym (RTLD_DEFAULT, entrypointName);
+    else
+        return NULL;
 }
 
 void
@@ -242,6 +261,10 @@ mono_ios_runtime_init (void)
     setenv ("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "1", TRUE);
 #endif
 
+#if HYBRID_GLOBALIZATION
+    setenv ("DOTNET_SYSTEM_GLOBALIZATION_HYBRID", "1", TRUE);
+#endif
+
 #if ENABLE_RUNTIME_LOGGING
     setenv ("MONO_LOG_LEVEL", "debug", TRUE);
     setenv ("MONO_LOG_MASK", "all", TRUE);
@@ -254,30 +277,31 @@ mono_ios_runtime_init (void)
     setenv ("DOTNET_DiagnosticPorts", DIAGNOSTIC_PORTS, true);
 #endif
 
-    id args_array = [[NSProcessInfo processInfo] arguments];
-    assert ([args_array count] <= 128);
-    const char *managed_argv [128];
-    int argi;
-    for (argi = 0; argi < [args_array count]; argi++) {
-        NSString* arg = [args_array objectAtIndex: argi];
-        managed_argv[argi] = [arg UTF8String];
-    }
+    char **managed_argv;
+    size_t argi = get_managed_args (&managed_argv);
 
     bool wait_for_debugger = FALSE;
 
     const char* bundle = get_bundle_path ();
     chdir (bundle);
 
+    char pinvoke_override[1024];
+    snprintf(pinvoke_override, sizeof(pinvoke_override) - 1, "%p", &handle_pinvoke_override);
+
     char icu_dat_path [1024];
     int res;
-
+#if defined(HYBRID_GLOBALIZATION)
+    res = snprintf (icu_dat_path, sizeof (icu_dat_path) - 1, "%s/%s", bundle, "icudt_hybrid.dat");
+#else
     res = snprintf (icu_dat_path, sizeof (icu_dat_path) - 1, "%s/%s", bundle, "icudt.dat");
+#endif
     assert (res > 0);
 
     // TODO: set TRUSTED_PLATFORM_ASSEMBLIES, APP_PATHS and NATIVE_DLL_SEARCH_DIRECTORIES
     const char *appctx_keys [] = {
         "RUNTIME_IDENTIFIER",
         "APP_CONTEXT_BASE_DIRECTORY",
+        "PINVOKE_OVERRIDE",
 #if !defined(INVARIANT_GLOBALIZATION)
         "ICU_DAT_FILE_PATH"
 #endif
@@ -285,13 +309,14 @@ mono_ios_runtime_init (void)
     const char *appctx_values [] = {
         APPLE_RUNTIME_IDENTIFIER,
         bundle,
+        pinvoke_override,
 #if !defined(INVARIANT_GLOBALIZATION)
         icu_dat_path
 #endif
     };
 
     char *file_name = RUNTIMECONFIG_BIN_FILE;
-    int str_len = strlen (bundle) + strlen (file_name) + 2;
+    unsigned long str_len = strlen (bundle) + strlen (file_name) + 2;
     char *file_path = (char *)malloc (sizeof (char) * str_len);
     int num_char = snprintf (file_path, str_len, "%s/%s", bundle, file_name);
     struct stat buffer;
@@ -327,10 +352,9 @@ mono_ios_runtime_init (void)
     os_log_info (OS_LOG_DEFAULT, "INTERP Enabled");
     mono_jit_set_aot_mode (MONO_AOT_MODE_INTERP_ONLY);
 #elif (!TARGET_OS_SIMULATOR && !TARGET_OS_MACCATALYST) || FORCE_AOT
-    register_dllmap ();
+    pinvoke_override_enabled = true;
     // register modules
     register_aot_modules ();
-
 #if (FORCE_INTERPRETER && FORCE_AOT)
     os_log_info (OS_LOG_DEFAULT, "AOT INTERP Enabled");
     mono_jit_set_aot_mode (MONO_AOT_MODE_INTERP);
@@ -367,11 +391,13 @@ mono_ios_runtime_init (void)
     assert (assembly);
     os_log_info (OS_LOG_DEFAULT, "Executable: %{public}s", executable);
 
-    res = mono_jit_exec (mono_domain_get (), assembly, argi, managed_argv);
+    res = mono_jit_exec (mono_domain_get (), assembly, (int)argi, managed_argv);
     // Print this so apps parsing logs can detect when we exited
     os_log_info (OS_LOG_DEFAULT, EXIT_CODE_TAG ": %d", res);
 
     mono_jit_cleanup (domain);
+
+    free_managed_args (&managed_argv, argi);
 
     exit (res);
 }

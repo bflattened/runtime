@@ -294,16 +294,26 @@ static int FindLibUsingOverride(const char* versionPrefix, char* symbolName, cha
     char* versionOverride = getenv("CLR_ICU_VERSION_OVERRIDE");
     if (versionOverride != NULL)
     {
-        int first = -1;
-        int second = -1;
-        int third = -1;
-
-        int matches = sscanf(versionOverride, "%d.%d.%d", &first, &second, &third);
-        if (matches > 0)
+        if (strcmp(versionOverride, "build") == 0)
         {
-            if (OpenICULibraries(first, second, third, versionPrefix, symbolName, symbolVersion))
+            if (OpenICULibraries(U_ICU_VERSION_MAJOR_NUM, -1, -1, versionPrefix, symbolName, symbolVersion))
             {
                 return true;
+            }
+        }
+        else
+        {
+            int first = -1;
+            int second = -1;
+            int third = -1;
+
+            int matches = sscanf(versionOverride, "%d.%d.%d", &first, &second, &third);
+            if (matches > 0)
+            {
+                if (OpenICULibraries(first, second, third, versionPrefix, symbolName, symbolVersion))
+                {
+                    return true;
+                }
             }
         }
     }
@@ -426,6 +436,7 @@ static void InitializeVariableMaxAndTopPointers(char* symbolVersion)
 #if defined(TARGET_OSX) || defined(TARGET_ANDROID)
     // OSX and Android always run against ICU version which has ucol_setMaxVariable.
     // We shouldn't come here.
+    (void)symbolVersion;
     assert(false);
 #elif defined(TARGET_WINDOWS)
     char symbolName[SYMBOL_NAME_SIZE];

@@ -116,17 +116,16 @@ namespace System
             ArgumentNullException.ThrowIfNull(sourceArray);
             ArgumentNullException.ThrowIfNull(destinationArray);
 
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length), SR.ArgumentOutOfRange_NeedNonNegNum);
+            ArgumentOutOfRangeException.ThrowIfNegative(length);
 
             if (sourceArray.Rank != destinationArray.Rank)
                 throw new RankException(SR.Rank_MultiDimNotSupported);
 
             if (sourceIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(sourceIndex), "Value has to be >= 0.");
+                throw new ArgumentOutOfRangeException(nameof(sourceIndex), SR.ArgumentOutOfRange_NeedNonNegNum);
 
             if (destinationIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(destinationIndex), "Value has to be >= 0.");
+                throw new ArgumentOutOfRangeException(nameof(destinationIndex), SR.ArgumentOutOfRange_NeedNonNegNum);
 
             var src = sourceArray;
             var dst = destinationArray;
@@ -391,7 +390,9 @@ namespace System
         }
 
         [Intrinsic]
+#pragma warning disable CA1822 // Mark members as static
         internal int GetElementSize() => GetElementSize();
+#pragma warning restore
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern CorElementType GetCorElementTypeOfElementTypeInternal(ObjectHandleOnStack arr);
@@ -467,7 +468,8 @@ namespace System
 
         internal IEnumerator<T> InternalArray__IEnumerable_GetEnumerator<T>()
         {
-            return Length == 0 ? SZGenericArrayEnumerator<T>.Empty : new SZGenericArrayEnumerator<T>(Unsafe.As<T[]>(this));
+            int length = Length;
+            return length == 0 ? SZGenericArrayEnumerator<T>.Empty : new SZGenericArrayEnumerator<T>(Unsafe.As<T[]>(this), length);
         }
 
         internal void InternalArray__ICollection_Clear()

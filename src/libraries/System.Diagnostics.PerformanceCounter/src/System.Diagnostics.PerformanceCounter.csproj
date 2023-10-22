@@ -2,13 +2,15 @@
   <PropertyGroup>
     <TargetFrameworks>$(NetCoreAppCurrent)-windows;$(NetCoreAppCurrent);$(NetCoreAppPrevious)-windows;$(NetCoreAppPrevious);$(NetCoreAppMinimum)-windows;$(NetCoreAppMinimum);netstandard2.0;$(NetFrameworkMinimum)</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>$(NoWarn);CA1847</NoWarn>
-    <Nullable>annotations</Nullable>
     <IsPackable>true</IsPackable>
     <PackageDescription>Provides the System.Diagnostics.PerformanceCounter class, which allows access to Windows performance counters.
 
 Commonly Used Types:
 System.Diagnostics.PerformanceCounter</PackageDescription>
+
+    <!-- TODO https://github.com/dotnet/runtime/issues/90400: Annotate for nullable reference types -->
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);nullable</NoWarn>
   </PropertyGroup>
 
   <!-- DesignTimeBuild requires all the TargetFramework Derived Properties to not be present in the first property group. -->
@@ -120,8 +122,6 @@ System.Diagnostics.PerformanceCounter</PackageDescription>
              Link="Common\Interop\Windows\Pdh\Interop.PdhFormatFromRawValue.cs" />
     <Compile Include="$(CommonPath)Interop\Windows\PerfCounter\Interop.PerformanceData.cs"
              Link="Common\Interop\Windows\PerfCounter\Interop.PerformanceData.cs" />
-    <Compile Include="$(CommonPath)Microsoft\Win32\SafeHandles\SafeLocalAllocHandle.cs"
-             Link="Common\Microsoft\Win32\SafeHandles\SafeLocalAllocHandle.cs" />
     <Compile Include="$(CommonPath)Microsoft\Win32\SafeHandles\SafePerfProviderHandle.cs"
              Link="Common\Microsoft\Win32\SafeHandles\SafePerfProviderHandle.cs" />
     <Compile Include="$(CommonPath)System\Diagnostics\NetFrameworkUtils.cs"

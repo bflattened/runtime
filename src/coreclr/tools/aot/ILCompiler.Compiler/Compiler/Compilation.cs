@@ -302,9 +302,9 @@ namespace ILCompiler
             switch (lookupKind)
             {
                 case ReadyToRunHelperId.TypeHandle:
-                    return NodeFactory.ConstructedTypeSymbol(WithoutFunctionPointerType((TypeDesc)targetOfLookup));
+                    return NodeFactory.ConstructedTypeSymbol((TypeDesc)targetOfLookup);
                 case ReadyToRunHelperId.NecessaryTypeHandle:
-                    return NecessaryTypeSymbolIfPossible(WithoutFunctionPointerType((TypeDesc)targetOfLookup));
+                    return NecessaryTypeSymbolIfPossible((TypeDesc)targetOfLookup);
                 case ReadyToRunHelperId.TypeHandleForCasting:
                     {
                         var type = (TypeDesc)targetOfLookup;
@@ -403,8 +403,7 @@ namespace ILCompiler
                     int pointerSize = _nodeFactory.Target.PointerSize;
 
                     GenericLookupResult lookup = ReadyToRunGenericHelperNode.GetLookupSignature(_nodeFactory, lookupKind, targetOfLookup);
-                    int dictionarySlot = dictionaryLayout.GetSlotForFixedEntry(lookup);
-                    if (dictionarySlot != -1)
+                    if (dictionaryLayout.TryGetSlotForEntry(lookup, out int dictionarySlot))
                     {
                         int dictionaryOffset = dictionarySlot * pointerSize;
 
@@ -421,16 +420,16 @@ namespace ILCompiler
                             return GenericDictionaryLookup.CreateFixedLookup(contextSource, vtableOffset, dictionaryOffset, indirectLastOffset: indirectLastOffset);
                         }
                     }
+                    else
+                    {
+                        return GenericDictionaryLookup.CreateNullLookup(contextSource);
+                    }
                 }
             }
 
             // Fixed lookup not possible - use helper.
             return GenericDictionaryLookup.CreateHelperLookup(contextSource, lookupKind, targetOfLookup);
         }
-
-        // CoreCLR compat - referring to function pointer types handled as IntPtr. No MethodTable for function pointers for now.
-        private static TypeDesc WithoutFunctionPointerType(TypeDesc type)
-            => type.IsFunctionPointer ? type.Context.GetWellKnownType(WellKnownType.IntPtr) : type;
 
         public bool IsFatPointerCandidate(MethodDesc containingMethod, MethodSignature signature)
         {
@@ -475,7 +474,7 @@ namespace ILCompiler
             }
 
             // Normalize to the slot defining method
-            MethodDesc slotNormalizedMethod = TypeSystemContext.GetInstantiatedMethod(
+            InstantiatedMethod slotNormalizedMethod = TypeSystemContext.GetInstantiatedMethod(
                 slotNormalizedMethodDefinition,
                 targetMethod.Instantiation);
 
@@ -503,7 +502,7 @@ namespace ILCompiler
 
                 while (!slotNormalizedMethod.OwningType.HasSameTypeDefinition(runtimeDeterminedOwningType))
                 {
-                    TypeDesc runtimeDeterminedBaseTypeDefinition = runtimeDeterminedOwningType.GetTypeDefinition().BaseType;
+                    DefType runtimeDeterminedBaseTypeDefinition = runtimeDeterminedOwningType.GetTypeDefinition().BaseType;
                     if (runtimeDeterminedBaseTypeDefinition.HasInstantiation)
                     {
                         runtimeDeterminedOwningType = runtimeDeterminedBaseTypeDefinition.InstantiateSignature(runtimeDeterminedOwningType.Instantiation, default);
@@ -634,8 +633,8 @@ namespace ILCompiler
             {
                 foreach (var node in MarkedNodes)
                 {
-                    if (node is IMethodBodyNode)
-                        yield return ((IMethodBodyNode)node).Method;
+                    if (node is IMethodBodyNode methodBodyNode)
+                        yield return methodBodyNode.Method;
                 }
             }
         }
@@ -647,9 +646,31 @@ namespace ILCompiler
                 foreach (var node in MarkedNodes)
                 {
                     if (node is ConstructedEETypeNode || node is CanonicalEETypeNode)
-                    {
                         yield return ((IEETypeNode)node).Type;
-                    }
+                }
+            }
+        }
+
+        public IEnumerable<TypeDesc> AllEETypes
+        {
+            get
+            {
+                foreach (var node in MarkedNodes)
+                {
+                    if (node is IEETypeNode typeNode)
+                        yield return typeNode.Type;
+                }
+            }
+        }
+
+        public IEnumerable<MethodDesc> ReflectedMethods
+        {
+            get
+            {
+                foreach (var node in MarkedNodes)
+                {
+                    if (node is ReflectedMethodNode reflectedMethod)
+                        yield return reflectedMethod.Method;
                 }
             }
         }

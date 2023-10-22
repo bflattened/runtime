@@ -50,16 +50,17 @@ namespace Microsoft.Interop
         private const string ParameterIdentifierSuffix = "param";
 
         /// <summary>
-        /// Gets a parameter for the unmanaged signature that represents the provided <paramref name="info"/>.
+        /// Gets a parameter for the unmanaged signature that represents the provided <paramref name="info"/> in the given <paramref name="context"/>.
         /// </summary>
         /// <param name="generator">The marshalling generator for this <paramref name="info"/></param>
         /// <param name="info">Object to marshal</param>
+        /// <param name="context">The stub marshalling context</param>
         public static ParameterSyntax AsParameter(this IMarshallingGenerator generator, TypePositionInfo info, StubCodeContext context)
         {
             SignatureBehavior behavior = generator.GetNativeSignatureBehavior(info);
             if (behavior == SignatureBehavior.ManagedTypeAndAttributes)
             {
-                return GenerateForwardingParameter(info);
+                return GenerateForwardingParameter(info, context.GetIdentifiers(info).managed);
             }
             string identifierName;
             if (context.Direction == MarshalDirection.ManagedToUnmanaged)
@@ -99,9 +100,9 @@ namespace Microsoft.Interop
                 });
         }
 
-        private static ParameterSyntax GenerateForwardingParameter(TypePositionInfo info)
+        private static ParameterSyntax GenerateForwardingParameter(TypePositionInfo info, string identifier)
         {
-            ParameterSyntax param = Parameter(Identifier(info.InstanceIdentifier))
+            ParameterSyntax param = Parameter(Identifier(identifier))
                 .WithModifiers(TokenList(Token(info.RefKindSyntax)))
                 .WithType(info.ManagedType.Syntax);
 
@@ -136,9 +137,9 @@ namespace Microsoft.Interop
             // so explicitly do not resurface a [MarshalAs(UnmanagdType.CustomMarshaler)] attribute.
             if (info.MarshallingAttributeInfo is MarshalAsInfo { UnmanagedType: not UnmanagedType.CustomMarshaler } marshalAs)
             {
-                marshalAsAttribute = Attribute(ParseName(TypeNames.System_Runtime_InteropServices_MarshalAsAttribute))
+                marshalAsAttribute = Attribute(NameSyntaxes.System_Runtime_InteropServices_MarshalAsAttribute)
                         .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(AttributeArgument(
-                        CastExpression(ParseTypeName(TypeNames.System_Runtime_InteropServices_UnmanagedType),
+                        CastExpression(TypeSyntaxes.System_Runtime_InteropServices_UnmanagedType,
                         LiteralExpression(SyntaxKind.NumericLiteralExpression,
                             Literal((int)marshalAs.UnmanagedType)))))));
                 return true;
@@ -183,7 +184,7 @@ namespace Microsoft.Interop
                 List<AttributeArgumentSyntax> marshalAsArguments = new List<AttributeArgumentSyntax>
                 {
                     AttributeArgument(
-                        CastExpression(ParseTypeName(TypeNames.System_Runtime_InteropServices_UnmanagedType),
+                        CastExpression(TypeSyntaxes.System_Runtime_InteropServices_UnmanagedType,
                         LiteralExpression(SyntaxKind.NumericLiteralExpression,
                             Literal((int)UnmanagedType.LPArray))))
                 };
@@ -212,12 +213,12 @@ namespace Microsoft.Interop
                 {
                     marshalAsArguments.Add(
                         AttributeArgument(NameEquals("ArraySubType"), null,
-                            CastExpression(ParseTypeName(TypeNames.System_Runtime_InteropServices_UnmanagedType),
+                            CastExpression(TypeSyntaxes.System_Runtime_InteropServices_UnmanagedType,
                             LiteralExpression(SyntaxKind.NumericLiteralExpression,
                                 Literal((int)elementMarshalAs.UnmanagedType))))
                         );
                 }
-                marshalAsAttribute = Attribute(ParseName(TypeNames.System_Runtime_InteropServices_MarshalAsAttribute))
+                marshalAsAttribute = Attribute(NameSyntaxes.System_Runtime_InteropServices_MarshalAsAttribute)
                         .WithArgumentList(AttributeArgumentList(SeparatedList(marshalAsArguments)));
                 return true;
             }

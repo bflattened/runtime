@@ -1,6 +1,20 @@
 {
   "architectures": [
     {
+      "lead": "",
+      "owners": [
+        ""
+      ],
+      "label": "arch-mips64"
+    },
+    {
+      "lead": "",
+      "owners": [
+        ""
+      ],
+      "label": "arch-s390x"
+    },
+    {
       "lead": "lewing",
       "owners": [
         "BrzVlad",
@@ -41,14 +55,15 @@
     {
       "lead": "steveisok",
       "owners": [
-        ""
+        "kotlarmilos"
       ],
       "label": "os-maccatalyst"
     },
     {
       "lead": "steveisok",
       "owners": [
-        "vargaz"
+        "vargaz",
+        "kotlarmilos"
       ],
       "label": "os-ios"
     },
@@ -66,9 +81,17 @@
     {
       "lead": "steveisok",
       "owners": [
-        "vargaz"
+        "vargaz",
+        "kotlarmilos"
       ],
       "label": "os-tvos"
+    },
+    {
+      "lead": "lewing",
+      "owners": [
+        "pavelsavara"
+      ],
+      "label": "os-wasi"
     }
   ],
   "areas": [
@@ -108,7 +131,8 @@
     {
       "lead": "SamMonoRT",
       "owners": [
-        "vargaz"
+        "vargaz",
+        "kotlarmilos"
       ],
       "label": "area-Codegen-AOT-mono"
     },
@@ -133,9 +157,17 @@
     {
       "lead": "SamMonoRT",
       "owners": [
-        "BrzVlad"
+        "BrzVlad",
+        "kotlarmilos"
       ],
       "label": "area-Codegen-Interpreter-mono"
+    },
+    {
+      "lead": "SamMonoRT",
+      "owners": [
+        "fanyang-mono"
+      ],
+      "label": "area-Codegen-Intrinsics-mono"
     },
     {
       "lead": "SamMonoRT",
@@ -207,12 +239,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-dependencymodel"
       ],
@@ -234,7 +265,7 @@
       "label": "area-Diagnostics-mono"
     },
     {
-      "lead": "marek-safar",
+      "lead": "SamMonoRT",
       "owners": [
         "lambdageek"
       ],
@@ -249,10 +280,9 @@
     },
     {
       "lead": "ericstj",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -288,10 +318,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -317,7 +346,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -421,24 +449,6 @@
       "label": "area-ILTools-coreclr"
     },
     {
-      "lead": "JulieLeeMSFT",
-      "owners": [
-        "AndyAyersMS",
-        "BruceForstall",
-        "EgorBo",
-        "erozenfeld",
-        "jakobbotsch",
-        "JulieLeeMSFT",
-        "kunalspathak",
-        "markples",
-        "SingleAccretion",
-        "tannergooding",
-        "TIHan",
-        "dotnet/jit-contrib"
-      ],
-      "label": "area-ILVerification"
-    },
-    {
       "lead": "agocke",
       "owners": [
         "jeffschwMSFT",
@@ -463,13 +473,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
-        "bartonjs",
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-infrastructure-libraries"
       ],
@@ -483,10 +491,10 @@
       "label": "area-Infrastructure-mono"
     },
     {
-      "lead": "jeffschwMSFT",
+      "lead": "agocke",
       "owners": [
         "AaronRobinsonMSFT",
-        "jeffschwMSFT"
+        "jkoritzinsky"
       ],
       "label": "area-Interop-coreclr"
     },
@@ -525,12 +533,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-microsoft-win32"
       ],
@@ -539,8 +546,17 @@
     {
       "lead": "agocke",
       "owners": [
+        "agocke",
+        "ivanpovazan",
         "jkotas",
-        "MichalStrehovsky"
+        "jtschuster",
+        "LakshanF",
+        "MichalStrehovsky",
+        "sbomer",
+        "tlakollo",
+        "vitek-karas",
+        "VSadov",
+        "dotnet/ilc-contrib"
       ],
       "label": "area-NativeAOT-coreclr"
     },
@@ -606,9 +622,7 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "drew-michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "GrabYourPitchforks",
         "jeffhandley",
@@ -709,10 +723,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -725,21 +738,24 @@
       "owners": [
         "ajcvickers",
         "david-engel",
-        "davoudeshtehari"
+        "davoudeshtehari",
+        "roji"
       ],
       "label": "area-System.Data"
     },
     {
       "lead": "ajcvickers",
       "owners": [
-        "ajcvickers"
+        "ajcvickers",
+        "roji"
       ],
       "label": "area-System.Data.Odbc"
     },
     {
       "lead": "ajcvickers",
       "owners": [
-        "ajcvickers"
+        "ajcvickers",
+        "roji"
       ],
       "label": "area-System.Data.OleDB"
     },
@@ -805,12 +821,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-diagnostics-eventlog"
       ],
@@ -825,12 +840,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-diagnostics-performancecounter"
       ],
@@ -838,10 +852,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -860,12 +873,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-diagnostics-tracesource"
       ],
@@ -885,12 +897,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-drawing"
       ],
@@ -906,10 +917,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "GrabYourPitchforks",
         "jeffhandley",
@@ -920,10 +930,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "eiriktsarpalis",
         "ericstj",
         "GrabYourPitchforks",
@@ -935,12 +944,11 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-formats-tar"
       ],
@@ -962,10 +970,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -975,12 +982,11 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-io-compression"
       ],
@@ -988,10 +994,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -1045,10 +1050,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "jeffhandley",
         "Jozkee",
@@ -1059,12 +1063,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-management"
       ],
@@ -1072,10 +1075,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "dakersnar",
         "ericstj",
         "GrabYourPitchforks",
         "jeffhandley",
@@ -1091,7 +1093,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -1109,7 +1110,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -1127,7 +1127,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -1145,7 +1144,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -1163,7 +1161,6 @@
       "owners": [
         "antonfirsov",
         "CarnaViire",
-        "greenEkatherine",
         "halter73",
         "karelz",
         "liveans",
@@ -1177,9 +1174,8 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1190,9 +1186,8 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1212,13 +1207,6 @@
         "dotnet/area-system-reflection"
       ],
       "label": "area-System.Reflection"
-    },
-    {
-      "lead": "SamMonoRT",
-      "owners": [
-        "lambdageek"
-      ],
-      "label": "area-System.Reflection-mono"
     },
     {
       "lead": "ericstj",
@@ -1259,9 +1247,8 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1280,9 +1267,8 @@
     },
     {
       "lead": "ericstj",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1292,7 +1278,7 @@
       "label": "area-System.Runtime.CompilerServices"
     },
     {
-      "lead": "jeffschwMSFT",
+      "lead": "agocke",
       "owners": [
         "AaronRobinsonMSFT",
         "jkoritzinsky"
@@ -1308,9 +1294,8 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1321,10 +1306,9 @@
     },
     {
       "lead": "jeffhandley",
-      "pod": "adam-david-jeremy",
+      "pod": "adam-david",
       "owners": [
         "adamsitnik",
-        "bartonjs",
         "ericstj",
         "GrabYourPitchforks",
         "jeffhandley",
@@ -1352,12 +1336,11 @@
     },
     {
       "lead": "ericstj",
-      "pod": "akhil-carlos-viktor",
+      "pod": "carlos-viktor",
       "owners": [
         "carlossanlop",
         "ericstj",
         "jeffhandley",
-        "smasher164",
         "ViktorHofer",
         "dotnet/area-system-serviceprocess"
       ],
@@ -1438,9 +1421,8 @@
     },
     {
       "lead": "ericstj",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1460,9 +1442,8 @@
     },
     {
       "lead": "ericstj",
-      "pod": "drew-michael-tanner",
+      "pod": "michael-tanner",
       "owners": [
-        "dakersnar",
         "ericstj",
         "jeffhandley",
         "michaelgsharp",
@@ -1473,9 +1454,9 @@
       "label": "area-System.Threading.Tasks"
     },
     {
-      "lead": "HongGit",
+      "lead": "ajcvickers",
       "owners": [
-        "HongGit"
+        "roji"
       ],
       "label": "area-System.Transactions"
     },
@@ -1494,13 +1475,6 @@
       "label": "area-System.Xml"
     },
     {
-      "lead": "SamMonoRT",
-      "owners": [
-        "lambdageek"
-      ],
-      "label": "area-Threading-mono"
-    },
-    {
       "lead": "mangod9",
       "owners": [
         "kouvel"
@@ -1510,9 +1484,31 @@
     {
       "lead": "agocke",
       "owners": [
-        "sbomer"
+        "marek-safar",
+        "sbomer",
+        "tlakollo",
+        "vitek-karas",
+        "dotnet/illink"
       ],
       "label": "area-Tools-ILLink"
+    },
+    {
+      "lead": "JulieLeeMSFT",
+      "owners": [
+        "AndyAyersMS",
+        "BruceForstall",
+        "EgorBo",
+        "erozenfeld",
+        "jakobbotsch",
+        "JulieLeeMSFT",
+        "kunalspathak",
+        "markples",
+        "SingleAccretion",
+        "tannergooding",
+        "TIHan",
+        "dotnet/jit-contrib"
+      ],
+      "label": "area-Tools-ILVerification"
     },
     {
       "lead": "tommcdon",
@@ -1559,6 +1555,37 @@
         "lambdageek"
       ],
       "label": "area-VM-meta-mono"
+    },
+    {
+      "lead": "SamMonoRT",
+      "owners": [
+        "lambdageek"
+      ],
+      "label": "area-VM-reflection-mono"
+    },
+    {
+      "lead": "SamMonoRT",
+      "owners": [
+        "lambdageek"
+      ],
+      "label": "area-VM-threading-mono"
+    },
+    {
+      "lead": "lewing",
+      "owners": [
+        "baronfel",
+        "dsplaisted",
+        "joeloff",
+        "jonathanpeppers",
+        "lewing",
+        "marcpopMSFT",
+        "nagilson",
+        "Redth",
+        "rolfbjarne",
+        "steveisok",
+        "dotnet/net-sdk-workload-contributors"
+      ],
+      "label": "area-Workloads"
     }
   ]
 }

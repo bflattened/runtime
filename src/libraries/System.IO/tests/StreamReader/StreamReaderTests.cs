@@ -15,6 +15,8 @@ namespace System.IO.Tests
 {
     public partial class StreamReaderTests
     {
+        private const string LowerAlpha = "abcdefghijklmnopqrstuvwxyz";
+
         protected virtual Stream CreateStream()
         {
             return new MemoryStream();
@@ -170,6 +172,46 @@ namespace System.IO.Tests
 
                 sr.Read();
             }
+        }
+
+        [Fact]
+        public void TestPeekReadOneByteAtATime()
+        {
+            byte[] testData = new byte[] { 72, 69, 76, 76, 79 };
+            using var ms = new MemoryStream(testData);
+
+            // DelegateStream to read one at a time.
+            using var stream = new DelegateStream(
+                positionGetFunc: () => ms.Position,
+                lengthFunc: () => ms.Length,
+                canReadFunc: () => true,
+                readFunc: (buffer, offset, count) =>
+                {
+                    if (count == 0 || ms.Position == ms.Length)
+                    {
+                        return 0;
+                    }
+
+                    ms.ReadExactly(buffer, offset, 1);
+                    return 1;
+                });
+
+            using var sr = new StreamReader(stream);
+
+            for (int i = 0; i < testData.Length; i++)
+            {
+                Assert.Equal(i, stream.Position);
+
+                int tmp = sr.Peek();
+                Assert.Equal(testData[i], tmp);
+
+                tmp = sr.Read(); 
+                Assert.Equal(testData[i], tmp);
+            }
+
+            Assert.Equal(stream.Position, stream.Length);
+            Assert.Equal(-1, sr.Peek());
+            Assert.Equal(-1, sr.Read());
         }
 
         [Fact]
@@ -400,12 +442,8 @@ namespace System.IO.Tests
         [InlineData(100, 50, 101)]
         public void Read_ReadsExpectedData(int readLength, int totalLength, int bufferSize)
         {
-            var data = new char[totalLength];
             var r = new Random(42);
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = (char)('a' + r.Next(0, 26));
-            }
+            char[] data = r.GetItems<char>(LowerAlpha, totalLength);
 
             var result = new char[data.Length];
             Span<char> dst = result;
@@ -431,12 +469,8 @@ namespace System.IO.Tests
         [InlineData(100, 50, 101)]
         public void ReadBlock_ReadsExpectedData(int readLength, int totalLength, int bufferSize)
         {
-            var data = new char[totalLength];
             var r = new Random(42);
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = (char)('a' + r.Next(0, 26));
-            }
+            char[] data = r.GetItems<char>(LowerAlpha, totalLength);
 
             var result = new char[data.Length];
             Span<char> dst = result;
@@ -462,12 +496,8 @@ namespace System.IO.Tests
         [InlineData(100, 50, 101)]
         public async Task ReadAsync_ReadsExpectedData(int readLength, int totalLength, int bufferSize)
         {
-            var data = new char[totalLength];
             var r = new Random(42);
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = (char)('a' + r.Next(0, 26));
-            }
+            char[] data = r.GetItems<char>(LowerAlpha, totalLength);
 
             var result = new char[data.Length];
             Memory<char> dst = result;
@@ -493,12 +523,9 @@ namespace System.IO.Tests
         [InlineData(100, 50, 101)]
         public async Task ReadBlockAsync_ReadsExpectedData(int readLength, int totalLength, int bufferSize)
         {
-            var data = new char[totalLength];
             var r = new Random(42);
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = (char)('a' + r.Next(0, 26));
-            }
+            char[] data = r.GetItems<char>(LowerAlpha, totalLength);
+
 
             var result = new char[data.Length];
             Memory<char> dst = result;

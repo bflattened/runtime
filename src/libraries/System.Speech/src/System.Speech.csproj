@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFrameworks>$(NetCoreAppCurrent)-windows;$(NetCoreAppCurrent);$(NetCoreAppPrevious)-windows;$(NetCoreAppPrevious);$(NetCoreAppMinimum)-windows;$(NetCoreAppMinimum);netstandard2.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- CS0649: uninitialized interop type fields -->
     <!-- SA1129: https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/3277 -->
-    <!-- CA1846: Prefer 'AsSpan' over 'Substring' when span-based overloads are available -->
-    <NoWarn>$(NoWarn);CS0649;SA1129;CA1846;CA1847;IDE0059;IDE0060;CA1822;CA1852</NoWarn>
-    <Nullable>annotations</Nullable>
+    <NoWarn>$(NoWarn);CS0649;SA1129;IDE0059;IDE0060;CA1822;CA1852</NoWarn>
     <IsTrimmable>false</IsTrimmable>
+    <!-- Public API not fully documented and System.Speech has a PNSE assembly which isn't yet supported by the repo infrastructure. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
     <AddNETFrameworkPlaceholderFileToPackage>true</AddNETFrameworkPlaceholderFileToPackage>
     <AddNETFrameworkAssemblyReferenceToPackage>true</AddNETFrameworkAssemblyReferenceToPackage>
@@ -16,6 +17,10 @@
 Commonly Used Types
 System.Speech.Synthesis.SpeechSynthesizer
 System.Speech.Recognition.SpeechRecognizer</PackageDescription>
+
+    <!-- TODO https://github.com/dotnet/runtime/issues/90400: Annotate for nullable reference types -->
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);nullable</NoWarn>
   </PropertyGroup>
 
   <!-- DesignTimeBuild requires all the TargetFramework Derived Properties to not be present in the first property group. -->
@@ -224,6 +229,8 @@ System.Speech.Recognition.SpeechRecognizer</PackageDescription>
             Link="Common\Interop\Windows\WinMm\Interop.waveOutRestart.cs" />
     <Compile Include="$(CommonPath)Interop\Windows\WinMm\Interop.waveOutWrite.cs"
             Link="Common\Interop\Windows\WinMm\Interop.waveOutWrite.cs" />
+    <Compile Include="$(CommonPath)System\Obsoletions.cs"
+            Link="Common\System\Obsoletions.cs" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0-windows'))">
@@ -253,4 +260,5 @@ System.Speech.Recognition.SpeechRecognizer</PackageDescription>
     <EmbeddedResource Include="upstable_jpn.upsmap"
                       LogicalName="upstable_jpn.upsmap" />
   </ItemGroup>
+
 </Project>

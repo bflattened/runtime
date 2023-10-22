@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -20,12 +21,15 @@ internal static partial class Interop
 {
     internal static partial class OpenSsl
     {
+#if DEBUG
+        private static readonly string? s_keyLogFile = Environment.GetEnvironmentVariable("SSLKEYLOGFILE");
+        private static readonly FileStream? s_fileStream = s_keyLogFile != null ? File.Open(s_keyLogFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite) : null;
+#endif
         private const string DisableTlsResumeCtxSwitch = "System.Net.Security.DisableTlsResume";
         private const string DisableTlsResumeEnvironmentVariable = "DOTNET_SYSTEM_NET_SECURITY_DISABLETLSRESUME";
         private const string TlsCacheSizeCtxName = "System.Net.Security.TlsCacheSize";
         private const string TlsCacheSizeEnvironmentVariable = "DOTNET_SYSTEM_NET_SECURITY_TLSCACHESIZE";
         private const SslProtocols FakeAlpnSslProtocol = (SslProtocols)1;   // used to distinguish server sessions with ALPN
-        private static readonly IdnMapping s_idnMapping = new IdnMapping();
         private static readonly ConcurrentDictionary<SslProtocols, SafeSslContextHandle> s_clientSslContexts = new ConcurrentDictionary<SslProtocols, SafeSslContextHandle>();
 
         #region internal methods
@@ -52,7 +56,7 @@ internal static partial class Interop
             return bindingHandle;
         }
 
-        private static int s_cacheSize = GetCacheSize();
+        private static readonly int s_cacheSize = GetCacheSize();
 
         private static volatile int s_disableTlsResume = -1;
 
@@ -85,16 +89,11 @@ internal static partial class Interop
 
         private static int GetCacheSize()
         {
-            int cacheSize = -1;
             string? value = AppContext.GetData(TlsCacheSizeCtxName) as string ?? Environment.GetEnvironmentVariable(TlsCacheSizeEnvironmentVariable);
-            try
+            if (!int.TryParse(value, CultureInfo.InvariantCulture, out int cacheSize))
             {
-                if (value != null)
-                {
-                    cacheSize = int.Parse(value);
-                }
+                cacheSize = -1;
             }
-            catch { };
 
             return cacheSize;
         }
@@ -228,7 +227,7 @@ internal static partial class Interop
                 {
                     SetSslCertificate(sslCtx, sslAuthenticationOptions.CertificateContext.CertificateHandle, sslAuthenticationOptions.CertificateContext.KeyHandle);
 
-                    if (sslAuthenticationOptions.CertificateContext.IntermediateCertificates.Length > 0)
+                    if (sslAuthenticationOptions.CertificateContext.IntermediateCertificates.Count > 0)
                     {
                         if (!Ssl.AddExtraChainCertificates(sslCtx, sslAuthenticationOptions.CertificateContext.IntermediateCertificates))
                         {
@@ -241,6 +240,12 @@ internal static partial class Interop
                         Ssl.SslCtxSetDefaultOcspCallback(sslCtx);
                     }
                 }
+#if DEBUG
+                if (s_fileStream != null)
+                {
+                    Ssl.SslCtxSetKeylogCallback(sslCtx, &KeyLogCallback);
+                }
+#endif
             }
             catch
             {
@@ -251,7 +256,7 @@ internal static partial class Interop
             return sslCtx;
         }
 
-        internal static void UpdateClientCertiticate(SafeSslHandle ssl, SslAuthenticationOptions sslAuthenticationOptions)
+        internal static void UpdateClientCertificate(SafeSslHandle ssl, SslAuthenticationOptions sslAuthenticationOptions)
         {
             // Disable certificate selection callback. We either got certificate or we will try to proceed without it.
             Interop.Ssl.SslSetClientCertCallback(ssl, 0);
@@ -276,7 +281,7 @@ internal static partial class Interop
                 throw CreateSslException(SR.net_ssl_use_private_key_failed);
             }
 
-            if (sslAuthenticationOptions.CertificateContext.IntermediateCertificates.Length > 0)
+            if (sslAuthenticationOptions.CertificateContext.IntermediateCertificates.Count > 0)
             {
                 if (!Ssl.AddExtraChainCertificates(ssl, sslAuthenticationOptions.CertificateContext.IntermediateCertificates))
                 {
@@ -293,7 +298,7 @@ internal static partial class Interop
             SafeSslContextHandle? newCtxHandle = null;
             SslProtocols protocols = CalculateEffectiveProtocols(sslAuthenticationOptions);
             bool hasAlpn = sslAuthenticationOptions.ApplicationProtocols != null && sslAuthenticationOptions.ApplicationProtocols.Count != 0;
-            bool cacheSslContext = !DisableTlsResume && sslAuthenticationOptions.EncryptionPolicy == EncryptionPolicy.RequireEncryption && sslAuthenticationOptions.CipherSuitesPolicy == null;
+            bool cacheSslContext = sslAuthenticationOptions.AllowTlsResume && !DisableTlsResume && sslAuthenticationOptions.EncryptionPolicy == EncryptionPolicy.RequireEncryption && sslAuthenticationOptions.CipherSuitesPolicy == null;
 
             if (cacheSslContext)
             {
@@ -306,7 +311,8 @@ internal static partial class Interop
                     if (!Interop.Ssl.Capabilities.Tls13Supported ||
                        string.IsNullOrEmpty(sslAuthenticationOptions.TargetHost) ||
                        sslAuthenticationOptions.CertificateContext != null ||
-                        sslAuthenticationOptions.CertSelectionDelegate != null)
+                       sslAuthenticationOptions.ClientCertificates?.Count > 0 ||
+                       sslAuthenticationOptions.CertSelectionDelegate != null)
                     {
                         cacheSslContext = false;
                     }
@@ -384,21 +390,22 @@ internal static partial class Interop
 
                 if (sslAuthenticationOptions.IsClient)
                 {
-                    // The IdnMapping converts unicode input into the IDNA punycode sequence.
-                    string punyCode = string.IsNullOrEmpty(sslAuthenticationOptions.TargetHost) ? string.Empty : s_idnMapping.GetAscii(sslAuthenticationOptions.TargetHost!);
-
-                    // Similar to windows behavior, set SNI on openssl by default for client context, ignore errors.
-                    if (!Ssl.SslSetTlsExtHostName(sslHandle, punyCode))
+                    if (!string.IsNullOrEmpty(sslAuthenticationOptions.TargetHost) && !TargetHostNameHelper.IsValidAddress(sslAuthenticationOptions.TargetHost))
                     {
-                        Crypto.ErrClearError();
-                    }
+                        // Similar to windows behavior, set SNI on openssl by default for client context, ignore errors.
+                        if (!Ssl.SslSetTlsExtHostName(sslHandle, sslAuthenticationOptions.TargetHost))
+                        {
+                            Crypto.ErrClearError();
+                        }
 
-                    if (cacheSslContext && !string.IsNullOrEmpty(punyCode))
-                    {
-                        sslCtxHandle.TrySetSession(sslHandle, punyCode);
-                        bool ignored = false;
-                        sslCtxHandle.DangerousAddRef(ref ignored);
-                        sslHandle.SslContextHandle = sslCtxHandle;
+
+                        if (cacheSslContext)
+                        {
+                            sslCtxHandle.TrySetSession(sslHandle, sslAuthenticationOptions.TargetHost);
+                            bool ignored = false;
+                            sslCtxHandle.DangerousAddRef(ref ignored);
+                            sslHandle.SslContextHandle = sslCtxHandle;
+                        }
                     }
 
                     // relevant to TLS 1.3 only: if user supplied a client cert or cert callback,
@@ -682,6 +689,11 @@ internal static partial class Interop
             *outlen = 0;
             IntPtr sslData = Ssl.SslGetData(ssl);
 
+            if (sslData == IntPtr.Zero)
+            {
+                return Ssl.SSL_TLSEXT_ERR_ALERT_FATAL;
+            }
+
             // reset application data to avoid dangling pointer.
             Ssl.SslSetData(ssl, IntPtr.Zero);
 
@@ -739,16 +751,18 @@ internal static partial class Interop
             Debug.Assert(session != IntPtr.Zero);
 
             IntPtr ptr = Ssl.SslGetData(ssl);
-            Debug.Assert(ptr != IntPtr.Zero);
-            GCHandle gch = GCHandle.FromIntPtr(ptr);
-
-            SafeSslContextHandle? ctxHandle = gch.Target as SafeSslContextHandle;
-            // There is no relation between SafeSslContextHandle and SafeSslHandle so the handle
-            // may be released while the ssl session is still active.
-            if (ctxHandle != null && ctxHandle.TryAddSession(Ssl.SslGetServerName(ssl), session))
+            if (ptr != IntPtr.Zero)
             {
-                // offered session was stored in our cache.
-                return 1;
+                GCHandle gch = GCHandle.FromIntPtr(ptr);
+
+                SafeSslContextHandle? ctxHandle = gch.Target as SafeSslContextHandle;
+                // There is no relation between SafeSslContextHandle and SafeSslHandle so the handle
+                // may be released while the ssl session is still active.
+                if (ctxHandle != null && ctxHandle.TryAddSession(Ssl.SslGetServerName(ssl), session))
+                {
+                    // offered session was stored in our cache.
+                    return 1;
+                }
             }
 
             // OpenSSL will destroy session.
@@ -778,6 +792,23 @@ internal static partial class Interop
             Debug.Assert(name != IntPtr.Zero);
             ctxHandle.RemoveSession(name);
         }
+
+#if DEBUG
+        [UnmanagedCallersOnly]
+        private static unsafe void KeyLogCallback(IntPtr ssl, char* line)
+        {
+            Debug.Assert(s_fileStream != null);
+            ReadOnlySpan<byte> data = MemoryMarshal.CreateReadOnlySpanFromNullTerminated((byte*)line);
+            if (data.Length > 0)
+            {
+                lock (s_fileStream)
+                {
+                    s_fileStream.Write(data);
+                    s_fileStream.WriteByte((byte)'\n');
+                }
+            }
+        }
+#endif
 
         private static int BioRead(SafeBioHandle bio, byte[] buffer, int count)
         {

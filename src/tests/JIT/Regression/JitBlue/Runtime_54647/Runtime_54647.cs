@@ -4,6 +4,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Xunit;
 
 namespace Runtime_54647
 {
@@ -13,9 +14,10 @@ namespace Runtime_54647
         Vector64<int> _fld2;
     }
 
-    class Program
+    public class Program
     {
-        static int Main()
+        [Fact]
+        public static int TestEntryPoint()
         {
             var val1 = new Vector64x2();
             var val2 = new Vector64x2();

@@ -193,10 +193,6 @@ namespace System.Text.Json
         /// <typeparamref name="TValue"/> is not compatible with the JSON,
         /// or when there is remaining data in the Stream.
         /// </exception>
-        /// <exception cref="NotSupportedException">
-        /// There is no compatible <see cref="System.Text.Json.Serialization.JsonConverter"/>
-        /// for <typeparamref name="TValue"/> or its serializable members.
-        /// </exception>
         public static ValueTask<TValue?> DeserializeAsync<TValue>(
             Stream utf8Json,
             JsonTypeInfo<TValue> jsonTypeInfo,
@@ -216,6 +212,41 @@ namespace System.Text.Json
         }
 
         /// <summary>
+        /// Reads the UTF-8 encoded text representing a single JSON value into an instance specified by the <paramref name="jsonTypeInfo"/>.
+        /// The Stream will be read to completion.
+        /// </summary>
+        /// <returns>A <paramref name="jsonTypeInfo"/> representation of the JSON value.</returns>
+        /// <param name="utf8Json">JSON data to parse.</param>
+        /// <param name="jsonTypeInfo">Metadata about the type to convert.</param>
+        /// <param name="cancellationToken">
+        /// The <see cref="System.Threading.CancellationToken"/> that can be used to cancel the read operation.
+        /// </param>
+        /// <exception cref="System.ArgumentNullException">
+        /// <paramref name="utf8Json"/> or <paramref name="jsonTypeInfo"/> is <see langword="null"/>.
+        /// </exception>
+        /// <exception cref="JsonException">
+        /// The JSON is invalid,
+        /// or when there is remaining data in the Stream.
+        /// </exception>
+        public static ValueTask<object?> DeserializeAsync(
+            Stream utf8Json,
+            JsonTypeInfo jsonTypeInfo,
+            CancellationToken cancellationToken = default)
+        {
+            if (utf8Json is null)
+            {
+                ThrowHelper.ThrowArgumentNullException(nameof(utf8Json));
+            }
+            if (jsonTypeInfo is null)
+            {
+                ThrowHelper.ThrowArgumentNullException(nameof(jsonTypeInfo));
+            }
+
+            jsonTypeInfo.EnsureConfigured();
+            return jsonTypeInfo.DeserializeAsObjectAsync(utf8Json, cancellationToken);
+        }
+
+        /// <summary>
         /// Reads the UTF-8 encoded text representing a single JSON value into a <typeparamref name="TValue"/>.
         /// The Stream will be read to completion.
         /// </summary>
@@ -230,10 +261,6 @@ namespace System.Text.Json
         /// The JSON is invalid,
         /// <typeparamref name="TValue"/> is not compatible with the JSON,
         /// or when there is remaining data in the Stream.
-        /// </exception>
-        /// <exception cref="NotSupportedException">
-        /// There is no compatible <see cref="System.Text.Json.Serialization.JsonConverter"/>
-        /// for <typeparamref name="TValue"/> or its serializable members.
         /// </exception>
         public static TValue? Deserialize<TValue>(
             Stream utf8Json,
@@ -250,6 +277,37 @@ namespace System.Text.Json
 
             jsonTypeInfo.EnsureConfigured();
             return jsonTypeInfo.Deserialize(utf8Json);
+        }
+
+        /// <summary>
+        /// Reads the UTF-8 encoded text representing a single JSON value into an instance specified by the <paramref name="jsonTypeInfo"/>.
+        /// The Stream will be read to completion.
+        /// </summary>
+        /// <returns>A <paramref name="jsonTypeInfo"/> representation of the JSON value.</returns>
+        /// <param name="utf8Json">JSON data to parse.</param>
+        /// <param name="jsonTypeInfo">Metadata about the type to convert.</param>
+        /// <exception cref="System.ArgumentNullException">
+        /// <paramref name="utf8Json"/> or <paramref name="jsonTypeInfo"/> is <see langword="null"/>.
+        /// </exception>
+        /// <exception cref="JsonException">
+        /// The JSON is invalid,
+        /// or when there is remaining data in the Stream.
+        /// </exception>
+        public static object? Deserialize(
+            Stream utf8Json,
+            JsonTypeInfo jsonTypeInfo)
+        {
+            if (utf8Json is null)
+            {
+                ThrowHelper.ThrowArgumentNullException(nameof(utf8Json));
+            }
+            if (jsonTypeInfo is null)
+            {
+                ThrowHelper.ThrowArgumentNullException(nameof(jsonTypeInfo));
+            }
+
+            jsonTypeInfo.EnsureConfigured();
+            return jsonTypeInfo.DeserializeAsObject(utf8Json);
         }
 
         /// <summary>
@@ -357,7 +415,6 @@ namespace System.Text.Json
         /// <param name="utf8Json">JSON data to parse.</param>
         /// <param name="options">Options to control the behavior during reading.</param>
         /// <param name="cancellationToken">The <see cref="System.Threading.CancellationToken"/> that can be used to cancel the read operation.</param>
-        /// <returns>An <typeparamref name="TValue"/> representation of the JSON value.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="utf8Json"/> is <see langword="null"/>.
         /// </exception>
@@ -374,7 +431,7 @@ namespace System.Text.Json
             }
 
             JsonTypeInfo<TValue> jsonTypeInfo = GetTypeInfo<TValue>(options);
-            return jsonTypeInfo.DeserializeAsyncEnumerable(utf8Json, cancellationToken);
+            return DeserializeAsyncEnumerableCore(utf8Json, jsonTypeInfo, cancellationToken);
         }
 
         /// <summary>
@@ -386,7 +443,6 @@ namespace System.Text.Json
         /// <param name="utf8Json">JSON data to parse.</param>
         /// <param name="jsonTypeInfo">Metadata about the element type to convert.</param>
         /// <param name="cancellationToken">The <see cref="System.Threading.CancellationToken"/> that can be used to cancel the read operation.</param>
-        /// <returns>An <typeparamref name="TValue"/> representation of the JSON value.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="utf8Json"/> or <paramref name="jsonTypeInfo"/> is <see langword="null"/>.
         /// </exception>
@@ -406,7 +462,70 @@ namespace System.Text.Json
             }
 
             jsonTypeInfo.EnsureConfigured();
-            return jsonTypeInfo.DeserializeAsyncEnumerable(utf8Json, cancellationToken);
+            return DeserializeAsyncEnumerableCore(utf8Json, jsonTypeInfo, cancellationToken);
+        }
+
+        private static IAsyncEnumerable<T> DeserializeAsyncEnumerableCore<T>(Stream utf8Json, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken)
+        {
+            Debug.Assert(jsonTypeInfo.IsConfigured);
+
+            JsonTypeInfo<Queue<T>> queueTypeInfo = jsonTypeInfo._asyncEnumerableQueueTypeInfo is { } cachedQueueTypeInfo
+                ? (JsonTypeInfo<Queue<T>>)cachedQueueTypeInfo
+                : CreateQueueTypeInfo(jsonTypeInfo);
+
+            return CreateAsyncEnumerable(utf8Json, queueTypeInfo, cancellationToken);
+
+            static async IAsyncEnumerable<T> CreateAsyncEnumerable(Stream utf8Json, JsonTypeInfo<Queue<T>> queueTypeInfo, [EnumeratorCancellation] CancellationToken cancellationToken)
+            {
+                Debug.Assert(queueTypeInfo.IsConfigured);
+                JsonSerializerOptions options = queueTypeInfo.Options;
+                var bufferState = new ReadBufferState(options.DefaultBufferSize);
+                ReadStack readStack = default;
+                readStack.Initialize(queueTypeInfo, supportContinuation: true);
+
+                var jsonReaderState = new JsonReaderState(options.GetReaderOptions());
+
+                try
+                {
+                    do
+                    {
+                        bufferState = await bufferState.ReadFromStreamAsync(utf8Json, cancellationToken, fillBuffer: false).ConfigureAwait(false);
+                        queueTypeInfo.ContinueDeserialize(
+                            ref bufferState,
+                            ref jsonReaderState,
+                            ref readStack);
+
+                        if (readStack.Current.ReturnValue is { } returnValue)
+                        {
+                            var queue = (Queue<T>)returnValue!;
+                            while (queue.TryDequeue(out T? element))
+                            {
+                                yield return element;
+                            }
+                        }
+                    }
+                    while (!bufferState.IsFinalBlock);
+                }
+                finally
+                {
+                    bufferState.Dispose();
+                }
+            }
+
+            static JsonTypeInfo<Queue<T>> CreateQueueTypeInfo(JsonTypeInfo<T> jsonTypeInfo)
+            {
+                var queueConverter = new QueueOfTConverter<Queue<T>, T>();
+                var queueTypeInfo = new JsonTypeInfo<Queue<T>>(queueConverter, jsonTypeInfo.Options)
+                {
+                    CreateObject = static () => new Queue<T>(),
+                    ElementTypeInfo = jsonTypeInfo,
+                    NumberHandling = jsonTypeInfo.Options.NumberHandling,
+                };
+
+                queueTypeInfo.EnsureConfigured();
+                jsonTypeInfo._asyncEnumerableQueueTypeInfo = queueTypeInfo;
+                return queueTypeInfo;
+            }
         }
     }
 }

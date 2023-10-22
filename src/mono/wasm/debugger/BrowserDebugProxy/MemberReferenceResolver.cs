@@ -23,14 +23,15 @@ namespace Microsoft.WebAssembly.Diagnostics
     internal sealed class MemberReferenceResolver
     {
         private static int evaluationResultObjectId;
-        private SessionId sessionId;
-        private int scopeId;
-        private MonoProxy proxy;
-        private ExecutionContext context;
-        private PerScopeCache scopeCache;
-        private ILogger logger;
+        private readonly SessionId sessionId;
+        private readonly int scopeId;
+        private readonly MonoProxy proxy;
+        private readonly ExecutionContext context;
+        private readonly PerScopeCache scopeCache;
+        private readonly ILogger logger;
         private bool localsFetched;
         private int linqTypeId;
+        public ExecutionContext GetContext() => context;
 
         public MemberReferenceResolver(MonoProxy proxy, ExecutionContext ctx, SessionId sessionId, int scopeId, ILogger logger)
         {
@@ -270,7 +271,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                     }
                     catch (Exception ex)
                     {
-                        throw new ExpressionEvaluationFailedException($"BUG: Unable to get properties for scope: {scopeId}. {ex}");
+                        throw new ReturnAsErrorException($"BUG: Unable to get properties for scope: {scopeId}. {ex}", ex.GetType().Name);
                     }
                     localsFetched = true;
                 }
@@ -365,7 +366,7 @@ namespace Microsoft.WebAssembly.Diagnostics
             }
         }
 
-        public async Task<JObject> Resolve(ElementAccessExpressionSyntax elementAccess, Dictionary<string, JObject> memberAccessValues, JObject indexObject, List<string> variableDefinitions, CancellationToken token)
+        public async Task<JObject> Resolve(ElementAccessExpressionSyntax elementAccess, Dictionary<string, JObject> memberAccessValues, JObject indexObject, List<VariableDefinition> variableDefinitions, CancellationToken token)
         {
             try
             {
@@ -395,6 +396,15 @@ namespace Microsoft.WebAssembly.Diagnostics
 
                 switch (objectId.Scheme)
                 {
+                    case "valuetype": //can be an inlined array
+                    {
+                        if (!context.SdbAgent.ValueCreator.TryGetValueTypeById(objectId.Value, out ValueTypeClass valueType))
+                            throw new InvalidOperationException($"Cannot apply indexing with [] to an expression of scheme '{objectId.Scheme}'");
+                        var typeInfo = await context.SdbAgent.GetTypeInfo(valueType.TypeId, token);
+                        if (int.TryParse(elementIdxInfo.ElementIdxStr, out elementIdx) && elementIdx >= 0 && elementIdx < valueType.InlineArray.Count)
+                            return (JObject)valueType.InlineArray[elementIdx]["value"];
+                        throw new InvalidOperationException($"Index is outside the bounds of the inline array");
+                    }
                     case "array":
                         rootObject["value"] = await context.SdbAgent.GetArrayValues(objectId.Value, token);
                         if (!elementIdxInfo.IsMultidimensional)
@@ -413,9 +423,10 @@ namespace Microsoft.WebAssembly.Diagnostics
                         if (type == "string")
                         {
                             var eaExpressionFormatted = elementAccessStrExpression.Replace('.', '_'); // instance_str
-                            variableDefinitions.Add(ExpressionEvaluator.ConvertJSToCSharpLocalVariableAssignment(eaExpressionFormatted, rootObject));
+                            variableDefinitions.Add(new (eaExpressionFormatted, rootObject, ExpressionEvaluator.ConvertJSToCSharpLocalVariableAssignment(eaExpressionFormatted, rootObject)));
                             var eaFormatted = elementAccessStr.Replace('.', '_'); // instance_str[1]
-                            return await ExpressionEvaluator.EvaluateSimpleExpression(this, eaFormatted, elementAccessStr, variableDefinitions, logger, token);
+                            var variableDef = await ExpressionEvaluator.GetVariableDefinitions(this, variableDefinitions, invokeToStringInObject: false, token);
+                            return await ExpressionEvaluator.EvaluateSimpleExpression(this, eaFormatted, elementAccessStr, variableDef, logger, token);
                         }
                         if (indexObject is null && elementIdxInfo.IndexingExpression is null)
                             throw new InternalErrorException($"Unable to write index parameter to invoke the method in the runtime.");
@@ -430,15 +441,15 @@ namespace Microsoft.WebAssembly.Diagnostics
                         {
                             MethodInfoWithDebugInformation methodInfo = await context.SdbAgent.GetMethodInfo(methodIds[i], token);
                             ParameterInfo[] paramInfo = methodInfo.GetParametersInfo();
-
-                            // get_Item should not have an overload, but if user defined it, take the default one: with one param (key)
                             if (paramInfo.Length == 1)
                             {
                                 try
                                 {
+                                    if (indexObject != null && !CheckParametersCompatibility(paramInfo[0].TypeCode, indexObject))
+                                        continue;
                                     ArraySegment<byte> buffer = indexObject is null ?
-                                        await WriteLiteralExpressionAsIndex(objectId,  elementIdxInfo.IndexingExpression, elementIdxInfo.ElementIdxStr) :
-                                        await WriteJObjectAsIndex(objectId, indexObject, elementIdxInfo.ElementIdxStr);
+                                        await WriteLiteralExpressionAsIndex(objectId, elementIdxInfo.IndexingExpression, elementIdxInfo.ElementIdxStr) :
+                                        await WriteJObjectAsIndex(objectId, indexObject, elementIdxInfo.ElementIdxStr, paramInfo[0].TypeCode);
                                     JObject getItemRetObj = await context.SdbAgent.InvokeMethod(buffer, methodIds[i], token);
                                     return (JObject)getItemRetObj["value"];
                                 }
@@ -454,9 +465,9 @@ namespace Microsoft.WebAssembly.Diagnostics
                         throw new InvalidOperationException($"Cannot apply indexing with [] to an expression of scheme '{objectId.Scheme}'");
                 }
             }
-            catch (Exception ex) when (ex is not ExpressionEvaluationFailedException)
+            catch (Exception ex)
             {
-                throw new ExpressionEvaluationFailedException($"Unable to evaluate element access '{elementAccess}': {ex.Message}", ex);
+                throw new ReturnAsErrorException($"Unable to evaluate element access '{elementAccess}': {ex.Message}", ex.GetType().Name);
             }
 
             async Task<ElementIndexInfo> GetElementIndexInfo()
@@ -502,7 +513,8 @@ namespace Microsoft.WebAssembly.Diagnostics
                     else
                     {
                         string expression = arg.ToString();
-                        indexObject = await ExpressionEvaluator.EvaluateSimpleExpression(this, expression, expression, variableDefinitions, logger, token);
+                        var variableDef = await ExpressionEvaluator.GetVariableDefinitions(this, variableDefinitions, invokeToStringInObject: false, token);
+                        indexObject = await ExpressionEvaluator.EvaluateSimpleExpression(this, expression, expression, variableDef, logger, token);
                         string idxType = indexObject["type"].Value<string>();
                         if (idxType != "number")
                             throw new InvalidOperationException($"Cannot index with an object of type '{idxType}'");
@@ -515,12 +527,12 @@ namespace Microsoft.WebAssembly.Diagnostics
                     IndexingExpression: indexingExpression);
             }
 
-            async Task<ArraySegment<byte>> WriteJObjectAsIndex(DotnetObjectId rootObjId, JObject indexObject, string elementIdxStr)
+            async Task<ArraySegment<byte>> WriteJObjectAsIndex(DotnetObjectId rootObjId, JObject indexObject, string elementIdxStr, ElementType? expectedType)
             {
                 using var writer = new MonoBinaryWriter();
                 writer.WriteObj(rootObjId, context.SdbAgent);
                 writer.Write(1); // number of method args
-                if (!await writer.WriteJsonValue(indexObject, context.SdbAgent, token))
+                if (!await writer.WriteJsonValue(indexObject, context.SdbAgent, expectedType, token))
                     throw new InternalErrorException($"Parsing index of type {indexObject["type"].Value<string>()} to write it into the buffer failed.");
                 return writer.GetParameterBuffer();
             }
@@ -536,6 +548,56 @@ namespace Microsoft.WebAssembly.Diagnostics
             }
         }
 
+        private static bool CheckParametersCompatibility(ElementType? paramTypeCode, JObject value)
+        {
+            if (!paramTypeCode.HasValue)
+                return true;
+            var argumentType = value["type"]?.Value<string>();
+            var argumentClassName = value["className"]?.Value<string>();
+
+            switch (paramTypeCode.Value)
+            {
+                case ElementType.Object:
+                    if (argumentType != "object")
+                        return false;
+                    break;
+                case ElementType.I2:
+                case ElementType.I4:
+                case ElementType.I8:
+                case ElementType.R4:
+                case ElementType.R8:
+                case ElementType.U2:
+                case ElementType.U4:
+                case ElementType.U8:
+                    if (argumentType != "number")
+                        return false;
+                    if (argumentType == "object")
+                        return false;
+                    break;
+                case ElementType.Char:
+                    if (argumentType != "string" && argumentType != "symbol")
+                        return false;
+                    if (argumentType == "object")
+                        return false;
+                    break;
+                case ElementType.Boolean:
+                    if (argumentType == "boolean")
+                        return true;
+                    if (argumentType == "number" && (argumentClassName == "Single" || argumentClassName == "Double"))
+                        return false;
+                    if (argumentType == "object")
+                        return false;
+                    break;
+                case ElementType.String:
+                    if (argumentType != "string")
+                        return false;
+                    break;
+                default:
+                    return true;
+            }
+            return true;
+        }
+
         public async Task<(JObject, string)> ResolveInvocationInfo(InvocationExpressionSyntax method, CancellationToken token)
         {
             var methodName = "";
@@ -549,7 +611,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                     methodName = memberAccessExpressionSyntax.Name.ToString();
 
                     if (rootObject.IsNullValuedObject())
-                        throw new ExpressionEvaluationFailedException($"Expression '{memberAccessExpressionSyntax}' evaluated to null");
+                        throw new ReturnAsErrorException($"Expression '{memberAccessExpressionSyntax}' evaluated to null", "NullReferenceException");
                 }
                 else if (expr is IdentifierNameSyntax && scopeCache.ObjectFields.TryGetValue("this", out JObject thisValue))
                 {
@@ -558,7 +620,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                 }
                 return (rootObject, methodName);
             }
-            catch (Exception ex) when (ex is not (ExpressionEvaluationFailedException or ReturnAsErrorException))
+            catch (Exception ex) when (ex is not ReturnAsErrorException)
             {
                 throw new Exception($"Unable to evaluate method '{methodName}'", ex);
             }
@@ -655,7 +717,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                         }
                         else if (arg.Expression is IdentifierNameSyntax identifierName)
                         {
-                            if (!await commandParamsObjWriter.WriteJsonValue(memberAccessValues[identifierName.Identifier.Text], context.SdbAgent, token))
+                            if (!await commandParamsObjWriter.WriteJsonValue(memberAccessValues[identifierName.Identifier.Text], context.SdbAgent, methodParamsInfo[argIndex].TypeCode, token))
                                 throw new InternalErrorException($"Unable to evaluate method '{methodName}'. Unable to write IdentifierNameSyntax into binary writer.");
                         }
                         else
@@ -683,9 +745,9 @@ namespace Microsoft.WebAssembly.Diagnostics
                 }
                 throw new ReturnAsErrorException($"No implementation of method '{methodName}' matching '{method}' found in type {rootObject["className"]}.", "ArgumentError");
             }
-            catch (Exception ex) when (ex is not (ExpressionEvaluationFailedException or ReturnAsErrorException))
+            catch (Exception ex) when (ex is not ReturnAsErrorException)
             {
-                throw new ExpressionEvaluationFailedException($"Unable to evaluate method '{method}': {ex.Message}", ex);
+                throw new ReturnAsErrorException($"Unable to evaluate method '{method}': {ex.Message}", ex.GetType().Name);
             }
 
             async Task<int> FindMethodIdOnLinqEnumerable(IList<int> typeIds, string methodName)

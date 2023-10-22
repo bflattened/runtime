@@ -596,7 +596,7 @@ namespace System.Globalization
             [MethodImpl(MethodImplOptions.NoInlining)] // rare slow path that shouldn't impact perf of the main use case
             private static bool TrailingZeros(ReadOnlySpan<char> s, int index) =>
                 // For compatibility, we need to allow trailing zeros at the end of a number string
-                s.Slice(index).IndexOfAnyExcept('\0') < 0;
+                !s.Slice(index).ContainsAnyExcept('\0');
 
             internal static unsafe bool TryStringToNumber(ReadOnlySpan<char> str, NumberStyles options, scoped ref NumberBuffer number, StringBuilder sb, NumberFormatInfo numfmt, bool parseDecimal)
             {
@@ -964,10 +964,8 @@ namespace System.Globalization
                                 }
 
                                 groupSizeCount += groupDigits[groupSizeIndex];
-                                if (groupSizeCount < 0 || bufferSize < 0)
-                                {
-                                    throw new ArgumentOutOfRangeException(); // If we overflow
-                                }
+                                ArgumentOutOfRangeException.ThrowIfNegative(groupSizeCount); // If we overflow
+                                ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
                             }
 
                             if (groupSizeCount == 0) // If you passed in an array with one entry as 0, groupSizeCount == 0

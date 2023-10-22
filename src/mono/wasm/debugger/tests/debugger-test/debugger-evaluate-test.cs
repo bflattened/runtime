@@ -2123,3 +2123,61 @@ public static class NoNamespaceClass
         }
     }
 }
+[System.Diagnostics.DebuggerDisplay("{MyMethod2(),nq}")]
+public class TestEvaluateDontPauseOnBreakpoint
+{
+    public int count;
+    public static void run()
+    {
+        var myVar = new TestEvaluateDontPauseOnBreakpoint();
+        myVar.count = 10;
+        myVar.MyMethod2();
+        myVar.MyMethod();
+    }
+    public string MyMethod() {
+        System.Diagnostics.Debugger.Break();
+        return string.Format("Object {0}", count);
+    }
+    public string MyMethod2() {
+        return string.Format("Object {0}", count + 1);
+    }
+    public string MyMethod3() {
+        return MyMethod2();
+    }
+    public string MyCount
+    {
+        get
+        {
+            return MyMethod2();
+        }
+    }
+}
+public struct EvaluateStaticGetterInValueType
+{
+    public static int A => 5;
+}
+
+namespace DebuggerTests
+{
+    public class SumObjectAndString
+    {
+        public class MyClass
+        {
+            public override string ToString()
+            {
+                return "OverridenToString";
+            }
+        }
+        public static void run()
+        {
+            DateTime dt = new DateTime();
+            List<int> myList = new();
+            List<int> listNull = null;
+            object o = new();
+            MyClass myClass = new();
+            myList.Add(1);
+            Console.WriteLine(myList);
+            Console.WriteLine(dt);
+        }
+    }
+}

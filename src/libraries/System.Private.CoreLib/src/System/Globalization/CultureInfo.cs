@@ -203,10 +203,7 @@ namespace System.Globalization
         public CultureInfo(int culture, bool useUserOverride)
         {
             // We don't check for other invalid LCIDS here...
-            if (culture < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(culture), SR.ArgumentOutOfRange_NeedPosNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(culture);
 
             switch (culture)
             {
@@ -408,7 +405,7 @@ namespace System.Globalization
             {
                 ArgumentNullException.ThrowIfNull(value);
 
-                CultureInfo.VerifyCultureName(value, true);
+                VerifyCultureName(value, true);
 
                 if (s_asyncLocalCurrentUICulture == null)
                 {
@@ -446,7 +443,7 @@ namespace System.Globalization
 
                 if (value != null)
                 {
-                    CultureInfo.VerifyCultureName(value, true);
+                    VerifyCultureName(value, true);
                 }
 
                 s_DefaultThreadCurrentUICulture = value;
@@ -650,7 +647,7 @@ namespace System.Globalization
 
         public override bool Equals([NotNullWhen(true)] object? value)
         {
-            if (object.ReferenceEquals(this, value))
+            if (ReferenceEquals(this, value))
             {
                 return true;
             }
@@ -1020,10 +1017,7 @@ namespace System.Globalization
         /// </summary>
         public static CultureInfo GetCultureInfo(int culture)
         {
-            if (culture <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(culture), SR.ArgumentOutOfRange_NeedPosNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(culture);
 
             Dictionary<int, CultureInfo> lcidTable = CachedCulturesByLcid;
             CultureInfo? result;

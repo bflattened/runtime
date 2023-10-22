@@ -42,11 +42,6 @@ namespace Mono.Linker.Steps
 			}
 
 			switch (rootMode) {
-			case AssemblyRootMode.Default:
-				if (assembly.MainModule.Kind == ModuleKind.Dll)
-					goto case AssemblyRootMode.AllMembers;
-				else
-					goto case AssemblyRootMode.EntryPoint;
 			case AssemblyRootMode.EntryPoint:
 				var ep = assembly.MainModule.EntryPoint;
 				if (ep == null) {
@@ -103,12 +98,6 @@ namespace Mono.Linker.Steps
 
 			if (File.Exists (fileName)) {
 				assembly = Context.Resolver.GetAssembly (fileName);
-				AssemblyDefinition? loaded = Context.GetLoadedAssembly (assembly.Name.Name);
-
-				// The same assembly could be already loaded if there are multiple inputs pointing to same file
-				if (loaded != null)
-					return loaded;
-
 				Context.Resolver.CacheAssembly (assembly);
 				return assembly;
 			}

@@ -8,10 +8,10 @@ using System.Diagnostics;
 
 namespace System.Reflection.Emit
 {
-    internal sealed class DynamicILGenerator : ILGenerator
+    internal sealed class DynamicILGenerator : RuntimeILGenerator
     {
         internal DynamicScope m_scope;
-        private int m_methodSigToken;
+        private readonly int m_methodSigToken;
 
         internal DynamicILGenerator(DynamicMethod method, byte[] methodSignature, int size)
             : base(method, size)
@@ -43,7 +43,7 @@ namespace System.Reflection.Emit
             if (rtType == null)
                 throw new ArgumentException(SR.Argument_MustBeRuntimeType);
 
-            localBuilder = new LocalBuilder(m_localCount, localType, m_methodBuilder);
+            localBuilder = new LocalBuilder(m_localCount, localType, m_methodBuilder, pinned);
             // add the localType to local signature
             m_localSignature.AddArgument(localType, pinned);
             m_localCount++;
@@ -105,7 +105,6 @@ namespace System.Reflection.Emit
             }
 
             UpdateStackSize(opcode, stackchange);
-
             PutInteger4(token);
         }
 
@@ -131,7 +130,6 @@ namespace System.Reflection.Emit
 
             // need to sort out the stack size story
             UpdateStackSize(opcode, 1);
-
             PutInteger4(token);
         }
 
@@ -403,7 +401,7 @@ namespace System.Reflection.Emit
             throw new NotSupportedException(SR.InvalidOperation_NotAllowedInDynamicMethod);
         }
 
-        private int GetMemberRefToken(MethodBase methodInfo, Type[]? optionalParameterTypes)
+        private int GetMemberRefToken(MethodInfo methodInfo, Type[]? optionalParameterTypes)
         {
             Type[]? parameterTypes;
             Type[][]? requiredCustomModifiers;
@@ -440,7 +438,7 @@ namespace System.Reflection.Emit
             }
 
             SignatureHelper sig = GetMethodSigHelper(methodInfo.CallingConvention,
-                                                     MethodBuilder.GetMethodBaseReturnType(methodInfo),
+                                                     RuntimeMethodBuilder.GetMethodBaseReturnType(methodInfo),
                                                      parameterTypes,
                                                      requiredCustomModifiers,
                                                      optionalCustomModifiers,
@@ -571,13 +569,13 @@ namespace System.Reflection.Emit
     internal sealed class DynamicResolver : Resolver
     {
         #region Private Data Members
-        private __ExceptionInfo[]? m_exceptions;
-        private byte[]? m_exceptionHeader;
-        private DynamicMethod m_method;
-        private byte[] m_code;
-        private byte[] m_localSignature;
-        private int m_stackSize;
-        private DynamicScope m_scope;
+        private readonly __ExceptionInfo[]? m_exceptions;
+        private readonly byte[]? m_exceptionHeader;
+        private readonly DynamicMethod m_method;
+        private readonly byte[] m_code;
+        private readonly byte[] m_localSignature;
+        private readonly int m_stackSize;
+        private readonly DynamicScope m_scope;
         #endregion
 
         #region Internal Methods
@@ -850,23 +848,20 @@ namespace System.Reflection.Emit
             return m_scope.ResolveSignature(token, fromMethod);
         }
 
-        internal override MethodInfo GetDynamicMethod()
-        {
-            return m_method.GetMethodInfo();
-        }
+        internal override MethodInfo GetDynamicMethod() => m_method;
         #endregion
     }
 
     public class DynamicILInfo
     {
         #region Private Data Members
-        private DynamicMethod m_method;
-        private DynamicScope m_scope;
+        private readonly DynamicMethod m_method;
+        private readonly DynamicScope m_scope;
         private byte[] m_exceptions;
         private byte[] m_code;
         private byte[] m_localSignature;
         private int m_maxStackSize;
-        private int m_methodSignature;
+        private readonly int m_methodSignature;
         #endregion
 
         #region Constructor
@@ -907,8 +902,7 @@ namespace System.Reflection.Emit
         [CLSCompliant(false)]
         public unsafe void SetCode(byte* code, int codeSize, int maxStackSize)
         {
-            if (codeSize < 0)
-                throw new ArgumentOutOfRangeException(nameof(codeSize), SR.ArgumentOutOfRange_GenericPositive);
+            ArgumentOutOfRangeException.ThrowIfNegative(codeSize);
             if (codeSize > 0)
                 ArgumentNullException.ThrowIfNull(code);
 
@@ -924,8 +918,7 @@ namespace System.Reflection.Emit
         [CLSCompliant(false)]
         public unsafe void SetExceptions(byte* exceptions, int exceptionsSize)
         {
-            if (exceptionsSize < 0)
-                throw new ArgumentOutOfRangeException(nameof(exceptionsSize), SR.ArgumentOutOfRange_GenericPositive);
+            ArgumentOutOfRangeException.ThrowIfNegative(exceptionsSize);
 
             if (exceptionsSize > 0)
                 ArgumentNullException.ThrowIfNull(exceptions);
@@ -941,9 +934,7 @@ namespace System.Reflection.Emit
         [CLSCompliant(false)]
         public unsafe void SetLocalSignature(byte* localSignature, int signatureSize)
         {
-            if (signatureSize < 0)
-                throw new ArgumentOutOfRangeException(nameof(signatureSize), SR.ArgumentOutOfRange_GenericPositive);
-
+            ArgumentOutOfRangeException.ThrowIfNegative(signatureSize);
             if (signatureSize > 0)
                 ArgumentNullException.ThrowIfNull(localSignature);
 

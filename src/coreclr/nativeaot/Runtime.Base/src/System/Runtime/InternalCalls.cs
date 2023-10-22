@@ -10,6 +10,8 @@ using System.Runtime.CompilerServices;
 
 using Internal.Runtime;
 
+#pragma warning disable SYSLIB1054 // Use DllImport here instead of LibraryImport because this file is used by Test.CoreLib
+
 namespace System.Runtime
 {
     internal enum DispatchCellType
@@ -44,6 +46,10 @@ namespace System.Runtime
         OnUnhandledException = 7,
         IDynamicCastableIsInterfaceImplemented = 8,
         IDynamicCastableGetInterfaceImplementation = 9,
+        ObjectiveCMarshalTryGetTaggedMemory = 10,
+        ObjectiveCMarshalGetIsTrackedReferenceCallback = 11,
+        ObjectiveCMarshalGetOnEnteredFinalizerQueueCallback = 12,
+        ObjectiveCMarshalGetUnhandledExceptionPropagationHandler = 13,
     }
 
     internal static class InternalCalls
@@ -54,14 +60,14 @@ namespace System.Runtime
 
         // Force a garbage collection.
         [RuntimeExport("RhCollect")]
-        internal static void RhCollect(int generation, InternalGCCollectionMode mode)
+        internal static void RhCollect(int generation, InternalGCCollectionMode mode, bool lowMemoryP = false)
         {
-            RhpCollect(generation, mode);
+            RhpCollect(generation, mode, lowMemoryP);
         }
 
         [DllImport(Redhawk.BaseName)]
         [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-        private static extern void RhpCollect(int generation, InternalGCCollectionMode mode);
+        private static extern void RhpCollect(int generation, InternalGCCollectionMode mode, bool lowMemoryP);
 
         [RuntimeExport("RhGetGcTotalMemory")]
         internal static long RhGetGcTotalMemory()
@@ -149,8 +155,8 @@ namespace System.Runtime
         internal static extern unsafe void RhpAssignRef(ref object address, object obj);
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
-        [RuntimeImport(Redhawk.BaseName, "RhpInitMultibyte")]
-        internal static extern unsafe ref byte RhpInitMultibyte(ref byte dmem, int c, nuint size);
+        [RuntimeImport(Redhawk.BaseName, "RhpGcSafeZeroMemory")]
+        internal static extern unsafe ref byte RhpGcSafeZeroMemory(ref byte dmem, nuint size);
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         [RuntimeImport(Redhawk.BaseName, "memmove")]
@@ -227,6 +233,13 @@ namespace System.Runtime
         internal static extern unsafe bool RhpCallFilterFunclet(
             object exceptionObj, byte* pFilterIP, void* pvRegDisplay);
 
+#if FEATURE_OBJCMARSHAL
+        [RuntimeImport(Redhawk.BaseName, "RhpCallPropagateExceptionCallback")]
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        internal static extern unsafe IntPtr RhpCallPropagateExceptionCallback(
+            IntPtr callbackContext, IntPtr callback, void* pvRegDisplay, ref EH.ExInfo exInfo, IntPtr pPreviousTransitionFrame);
+#endif // FEATURE_OBJCMARSHAL
+
         [RuntimeImport(Redhawk.BaseName, "RhpFallbackFailFast")]
         [MethodImpl(MethodImplOptions.InternalCall)]
         internal static extern unsafe void RhpFallbackFailFast();
@@ -291,15 +304,7 @@ namespace System.Runtime
         // Indicate that the current round of finalizations is complete.
         [DllImport(Redhawk.BaseName)]
         [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-        internal static extern void RhpSignalFinalizationComplete();
-
-        [DllImport(Redhawk.BaseName)]
-        [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-        internal static extern void RhpAcquireCastCacheLock();
-
-        [DllImport(Redhawk.BaseName)]
-        [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-        internal static extern void RhpReleaseCastCacheLock();
+        internal static extern void RhpSignalFinalizationComplete(uint fCount);
 
         [DllImport(Redhawk.BaseName)]
         [UnmanagedCallConv(CallConvs = new Type[] { typeof(CallConvCdecl) })]

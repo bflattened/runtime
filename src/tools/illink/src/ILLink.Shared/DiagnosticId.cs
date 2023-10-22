@@ -10,7 +10,7 @@ namespace ILLink.Shared
 {
 	public enum DiagnosticId
 	{
-		// Linker error ids.
+		// Trimming error ids.
 		XmlFeatureDoesNotSpecifyFeatureValue = 1001,
 		XmlUnsupportedNonBooleanValueForFeature = 1002,
 		XmlException = 1003,
@@ -59,7 +59,7 @@ namespace ILLink.Shared
 		InvalidMetadataOption = 1046,
 		InvalidDependenciesFileFormat = 1047,
 
-		// Linker diagnostic ids.
+		// Trimming diagnostic ids.
 		TypeHasNoFieldsToPreserve = 2001,
 		TypeHasNoMethodsToPreserve = 2002,
 		CouldNotResolveDependencyAssembly = 2003,
@@ -234,6 +234,14 @@ namespace ILLink.Shared
 				>= 3000 and < 3050 => DiagnosticCategory.SingleFile,
 				>= 3050 and <= 6000 => DiagnosticCategory.AOT,
 				_ => throw new ArgumentException ($"The provided diagnostic id '{diagnosticId}' does not fall into the range of supported warning codes 2001 to 6000 (inclusive).")
+			};
+
+		public static string? GetHelpUri(this DiagnosticId diagnosticId) =>
+			diagnosticId.GetDiagnosticCategory() switch {
+				DiagnosticCategory.Trimming => $"https://learn.microsoft.com/dotnet/core/deploying/trimming/trim-warnings/il{(int) diagnosticId}",
+				DiagnosticCategory.SingleFile => $"https://learn.microsoft.com/dotnet/core/deploying/single-file/warnings/il{(int) diagnosticId}",
+				DiagnosticCategory.AOT =>$"https://learn.microsoft.com/dotnet/core/deploying/native-aot/warnings/il{(int) diagnosticId}",
+				_ => null
 			};
 	}
 }

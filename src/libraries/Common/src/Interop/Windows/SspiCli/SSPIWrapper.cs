@@ -172,7 +172,7 @@ namespace System.Net
             return errorCode;
         }
 
-        internal static int ApplyControlToken(ISSPIInterface secModule, ref SafeDeleteContext? context, in SecurityBuffer inputBuffer)
+        internal static int ApplyControlToken(ISSPIInterface secModule, ref SafeDeleteSslContext? context, in SecurityBuffer inputBuffer)
         {
             int errorCode = secModule.ApplyControlToken(ref context, in inputBuffer);
 
@@ -297,6 +297,9 @@ namespace System.Net
 
         public static bool QueryContextAttributes_SECPKG_ATTR_REMOTE_CERT_CONTEXT(ISSPIInterface secModule, SafeDeleteContext securityContext, out SafeFreeCertContext? certContext)
             => QueryCertContextAttribute(secModule, securityContext, Interop.SspiCli.ContextAttribute.SECPKG_ATTR_REMOTE_CERT_CONTEXT, out certContext);
+
+        public static bool QueryContextAttributes_SECPKG_ATTR_LOCAL_CERT_CONTEXT(ISSPIInterface secModule, SafeDeleteContext securityContext, out SafeFreeCertContext? certContext)
+            => QueryCertContextAttribute(secModule, securityContext, Interop.SspiCli.ContextAttribute.SECPKG_ATTR_LOCAL_CERT_CONTEXT, out certContext);
 
         public static bool QueryContextAttributes_SECPKG_ATTR_REMOTE_CERT_CHAIN(ISSPIInterface secModule, SafeDeleteContext securityContext, out SafeFreeCertContext? certContext)
             => QueryCertContextAttribute(secModule, securityContext, Interop.SspiCli.ContextAttribute.SECPKG_ATTR_REMOTE_CERT_CHAIN, out certContext);

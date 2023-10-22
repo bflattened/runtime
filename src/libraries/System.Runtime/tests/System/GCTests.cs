@@ -35,6 +35,9 @@ namespace System.Tests
             {
                 GC.Collect(i);
             }
+            // Also, expect GC.Collect(int.MaxValue) to work without exception since int.MaxValue represents
+            // a nongc heap generation (that is exactly what GC.GetGeneration returns for a non-gc heap object)
+            GC.Collect(int.MaxValue);
         }
 
         [Fact]
@@ -419,7 +422,7 @@ namespace System.Tests
         }
 
         [Theory]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/31657", TestRuntimes.Mono)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [InlineData(GCLatencyMode.Batch)]
         [InlineData(GCLatencyMode.Interactive)]
         // LowLatency does not roundtrip for server GC
@@ -458,6 +461,7 @@ namespace System.Tests
         private const int NoGCRequestedBudget = 8192;
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void GetGeneration_WeakReference()
         {
@@ -508,6 +512,7 @@ namespace System.Tests
         }
 
         [ConditionalTheory(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [InlineData(true, -1)]
         [InlineData(false, -1)]
         [InlineData(true, 0)]
@@ -528,6 +533,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_EndNoGCRegion_ThrowsInvalidOperationException()
         {
@@ -550,6 +556,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_ExitThroughAllocation()
         {
@@ -568,6 +575,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_StartWhileInNoGCRegion()
         {
@@ -583,6 +591,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_StartWhileInNoGCRegion_BlockingCollection()
         {
@@ -598,6 +607,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_StartWhileInNoGCRegion_LargeObjectHeapSize()
         {
@@ -613,6 +623,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_StartWhileInNoGCRegion_BlockingCollectionAndLOH()
         {
@@ -628,6 +639,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_SettingLatencyMode_ThrowsInvalidOperationException()
         {
@@ -648,6 +660,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_SOHSize()
         {
@@ -662,6 +675,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_SOHSize_BlockingCollection()
         {
@@ -676,6 +690,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_SOHSize_LOHSize()
         {
@@ -690,6 +705,7 @@ namespace System.Tests
         }
 
         [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         public static void TryStartNoGCRegion_SOHSize_LOHSize_BlockingCollection()
         {
@@ -704,6 +720,7 @@ namespace System.Tests
         }
 
         [ConditionalTheory(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         [InlineData(0)]
         [InlineData(-1)]
@@ -718,6 +735,7 @@ namespace System.Tests
         }
 
         [ConditionalTheory(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [OuterLoop]
         [InlineData(0)]                   // invalid because lohSize ==
         [InlineData(-1)]                  // invalid because lohSize < 0
@@ -801,7 +819,7 @@ namespace System.Tests
         private static bool IsNotArmProcessAndRemoteExecutorSupported => PlatformDetection.IsNotArmProcess && RemoteExecutor.IsSupported;
 
         [ActiveIssue("https://github.com/dotnet/runtime/issues/64935", TestPlatforms.FreeBSD)]
-        [ActiveIssue("https://github.com/mono/mono/issues/15236", TestRuntimes.Mono)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/73167", TestRuntimes.Mono)]
         [ConditionalFact(nameof(IsNotArmProcessAndRemoteExecutorSupported))] // [ActiveIssue("https://github.com/dotnet/runtime/issues/29434")]
         public static void GetGCMemoryInfo()
         {
@@ -1040,11 +1058,60 @@ namespace System.Tests
             Assert.Throws<OutOfMemoryException>(() => GC.AllocateUninitializedArray<double>(int.MaxValue, pinned: true));
         }
 
-        [Fact]
-        private static void AllocateArrayRefType()
+        [StructLayout(LayoutKind.Sequential)]
+        struct EmbeddedValueType<T>
         {
-            GC.AllocateUninitializedArray<string>(100);
-            Assert.Throws<ArgumentException>(() => GC.AllocateUninitializedArray<string>(100, pinned: true));
+            // There's a few extra fields here to ensure any reads and writes to Value reasonably are not just offset 0.
+            // This is a low-level smoke check that can give a bit of confidence in pointer arithmetic.
+            // The CLR is permitted to reorder fields and ignore the sequential consistency of value types if they contain
+            // managed references, but it will never hurt the test.
+            object _1;
+            byte _2;
+            public T Value;
+            int _3;
+            string _4;
+        }
+
+        [Theory]
+        [InlineData(false), InlineData(true)]
+        private static void AllocateArray_UninitializedOrNot_WithManagedType_DoesNotThrow(bool pinned)
+        {
+            void TryType<T>()
+            {
+                GC.AllocateUninitializedArray<T>(100, pinned);
+                GC.AllocateArray<T>(100, pinned);
+
+                GC.AllocateArray<EmbeddedValueType<T>>(100, pinned);
+                GC.AllocateUninitializedArray<EmbeddedValueType<T>>(100, pinned);
+            }
+
+            TryType<string>();
+            TryType<object>();
+        }
+
+        [Theory]
+        [InlineData(false), InlineData(true)]
+        private unsafe static void AllocateArrayPinned_ManagedValueType_CanRoundtripThroughPointer(bool uninitialized)
+        {
+            const int length = 100;
+            var rng = new Random(0xAF);
+
+            EmbeddedValueType<string>[] array = uninitialized ? GC.AllocateUninitializedArray<EmbeddedValueType<string>>(length, pinned: true) : GC.AllocateArray<EmbeddedValueType<string>>(length, pinned: true);
+            byte* pointer = (byte*)Unsafe.AsPointer(ref array[0]);
+            var size = Unsafe.SizeOf<EmbeddedValueType<string>>();
+
+            for(int i = 0; i < length; ++i)
+            {
+                int idx = rng.Next(length);
+                ref EmbeddedValueType<string> evt = ref Unsafe.AsRef<EmbeddedValueType<string>>(pointer + size * idx);
+
+                string stringValue = rng.NextSingle().ToString();
+                evt.Value = stringValue;
+
+                Assert.Equal(evt.Value, array[idx].Value);
+            }
+
+            GC.KeepAlive(array);
         }
 
         [Fact]

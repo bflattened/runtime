@@ -185,15 +185,6 @@ namespace System.Tests
         public void OSVersion_ValidVersion_OSX()
         {
             Version version = Environment.OSVersion.Version;
-
-            // NativeAOT hard-codes the runtime identifier at build time
-            if (!PlatformDetection.IsNativeAot)
-            {
-                // verify that the Environment.OSVersion.Version matches the current RID
-                // As of 12.0, only major version numbers are included in the RID
-                Assert.Contains(version.ToString(1), RuntimeInformation.RuntimeIdentifier);
-            }
-
             Assert.True(version.Minor >= 0, "OSVersion Minor should be non-negative");
             Assert.True(version.Build >= 0, "OSVersion Build should be non-negative");
             Assert.Equal(-1, version.Revision); // Revision is never set on OSX
@@ -368,6 +359,7 @@ namespace System.Tests
         [InlineData(Environment.SpecialFolder.MyPictures)]
         [InlineData(Environment.SpecialFolder.MyVideos)]
         [InlineData(Environment.SpecialFolder.Templates)]
+        [SkipOnPlatform(TestPlatforms.iOS | TestPlatforms.tvOS | TestPlatforms.Android | TestPlatforms.Browser, "Not supported on iOS/tvOS/Android/Browser.")]
         public void GetFolderPath_Unix_SpecialFolderDoesNotExist_CreatesSuccessfully(Environment.SpecialFolder folder)
         {
             string path = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
@@ -381,17 +373,6 @@ namespace System.Tests
         [Fact]
         public void GetSystemDirectory()
         {
-            if (PlatformDetection.IsWindowsNanoServer)
-            {
-                // https://github.com/dotnet/runtime/issues/21430
-                // On Windows Nano, ShGetKnownFolderPath currently doesn't give
-                // the correct result for SystemDirectory.
-                // Assert that it's wrong, so that if it's fixed, we don't forget to
-                // enable this test for Nano.
-                Assert.NotEqual(Environment.GetFolderPath(Environment.SpecialFolder.System), Environment.SystemDirectory);
-                return;
-            }
-
             Assert.Equal(Environment.GetFolderPath(Environment.SpecialFolder.System), Environment.SystemDirectory);
         }
 

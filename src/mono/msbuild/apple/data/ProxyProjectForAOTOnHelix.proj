@@ -1,37 +1,45 @@
-<Project DefaultTargets="BundleTestAppleApp">
-  <Import Project="Directory.Build.props" />
-  <PropertyGroup>
-    <MonoEnableLLVM>true</MonoEnableLLVM>
-  </PropertyGroup>
+<Project DefaultTargets="BundleTestAppleApp" Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TestRootDir Condition="'$(HELIX_WORKITEM_ROOT)' != ''">$(HELIX_WORKITEM_ROOT)\apple_build\</TestRootDir>
     <TestRootDir Condition="'$(HELIX_WORKITEM_ROOT)' == ''">$(MSBuildThisFileDirectory)..\apple_build\</TestRootDir>
 
-    <RunAOTCompilation Condition="'$(RunAOTCompilation)' == ''">true</RunAOTCompilation>
-    <OriginalPublishDir>$(TestRootDir)..\publish\</OriginalPublishDir>
+    <OriginalPublishDir>$([System.IO.Path]::GetFullPath('$(TestRootDir)..\publish\'))</OriginalPublishDir>
     <ExtraFilesPath>$(OriginalPublishDir)..\extraFiles\</ExtraFilesPath>
-    <IntermediateOutputPath>$(TestRootDir)\obj\</IntermediateOutputPath>
-
-    <AppleBuildAppDependsOn>_PrepareForAppleBuildAppOnHelix;$(AppleBuildAppDependsOn);_AfterAppleBuildAppOnHelix</AppleBuildAppDependsOn>
-
-    <_PropsFile>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).props</_PropsFile>
+    <AppleBuildDependsOn>_PrepareForAppleBuildAppOnHelix;$(AppleBuildDependsOn);_AfterAppleBuildOnHelix</AppleBuildDependsOn>
   </PropertyGroup>
 
-  <Import Project="$(_PropsFile)" />
+  <PropertyGroup Condition="'$(UseNativeAOTRuntime)' == 'true'">
+    <IntermediateOutputPath>$(OriginalPublishDir)</IntermediateOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <UseArtifactsIntermediateOutput>true</UseArtifactsIntermediateOutput>
+    <NativeLib>static</NativeLib>
+    <CustomNativeMain>true</CustomNativeMain>
+    <NativeCompilationDuringPublish>false</NativeCompilationDuringPublish>
+    <_IsApplePlatform>true</_IsApplePlatform>
+    <TargetsAppleMobile>true</TargetsAppleMobile>
+    <_targetOS>$(TargetOS)</_targetOS>
+  </PropertyGroup>
 
-  <Target Name="BundleTestAppleApp" DependsOnTargets="AppleBuildApp" />
+  <ItemGroup Condition="'$(UseNativeAOTRuntime)' == 'true'">
+    <DirectPInvoke Include="__Internal" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).props" />
+
+  <Target Name="BundleTestAppleApp" DependsOnTargets="AppleBuild" />
 
   <Target Name="_PrepareForAppleBuildAppOnHelix" DependsOnTargets="_PublishRuntimePack">
     <Message Text="** Building a proxy for the original test project, to AOT on helix. In order to do that, this recreates the original inputs for the *iOS/tvOS* part of the build. See $(MSBuildThisFileFullPath), and $(_PropsFile). **"
              Importance="High" />
 
     <PropertyGroup>
-      <AppleAppDir>$(OriginalPublishDir)</AppleAppDir>
-      <AppleAppBundleDir>$(TestRootDir)AppBundle\</AppleAppBundleDir>
-
-      <MainLibraryFileName>$(OriginalPublishDir)AppleTestRunner.dll</MainLibraryFileName>
-      <Optimized Condition="'$(Configuration)' != 'Debug'">true</Optimized>
+      <Optimized Condition="'$(Configuration)' == 'Release'">true</Optimized>
+      <MainLibraryFileName Condition="'$(MainLibraryFileName)' == '' and '$(IncludesTestRunner)' == 'true'">AppleTestRunner.dll</MainLibraryFileName>
+    
+      <AppleBuildDir>$(OriginalPublishDir)</AppleBuildDir>
+      <AppleBundleDir>$(TestRootDir)AppBundle\</AppleBundleDir>
     </PropertyGroup>
+
 
     <ItemGroup>
       <!-- Figure out if we can support JustInterp mode -->
@@ -43,6 +51,11 @@
       <AppleNativeFilesToBundle Include="@(_ExtraFiles)" Exclude="$(OriginalPublishDir)\*.dll" />
       <AppleNativeFilesToBundle Include="$(OriginalPublishDir)\**\*.*" Exclude="$(OriginalPublishDir)\*.dll" />
     </ItemGroup>
+
+    <PropertyGroup Condition="'$(UseRuntimeComponents)' == 'true'">
+      <RuntimeComponents>diagnostics_tracing;marshal-ilgen</RuntimeComponents>
+      <DiagnosticPorts>127.0.0.1:9000,nosuspend,listen</DiagnosticPorts>
+    </PropertyGroup>
   </Target>
 
   <Target Name="_PublishRuntimePack"
@@ -58,7 +71,7 @@
   </Target>
 
   <!-- Move the app to where the xharness runner expects it. -->
-  <Target Name="_AfterAppleBuildAppOnHelix">
+  <Target Name="_AfterAppleBuildOnHelix">
     <PropertyGroup>
       <_TestProjectName>$([System.IO.Path]::GetFileName('$(AppBundlePath)'))</_TestProjectName>
       <_XHarnessAppPath>$([MSBuild]::NormalizeDirectory($(XHARNESS_EXECUTION_DIR), $(_TestProjectName)))</_XHarnessAppPath>
@@ -75,6 +88,4 @@
 
     <Message Importance="High" Text="App moved to: $(_XHarnessAppPath)"/>
   </Target>
-
-  <Import Project="Directory.Build.targets" />
 </Project>

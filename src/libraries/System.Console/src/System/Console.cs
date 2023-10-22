@@ -235,16 +235,16 @@ namespace System
 
         private static TextWriter CreateOutputWriter(Stream outputStream)
         {
-            return TextWriter.Synchronized(outputStream == Stream.Null ?
-                StreamWriter.Null :
-                new StreamWriter(
+            return outputStream == Stream.Null ?
+                TextWriter.Null :
+                TextWriter.Synchronized(new StreamWriter(
                     stream: outputStream,
                     encoding: OutputEncoding.RemovePreamble(), // This ensures no prefix is written to the stream.
                     bufferSize: WriteBufferSize,
                     leaveOpen: true)
-                {
-                    AutoFlush = true
-                });
+                    {
+                        AutoFlush = true
+                    });
         }
 
         private static StrongBox<bool>? _isStdInRedirected;
@@ -406,10 +406,7 @@ namespace System
                     throw new IOException(SR.InvalidOperation_SetWindowSize);
                 }
 
-                if (value <= 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, SR.ArgumentOutOfRange_NeedPosNum);
-                }
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
 
                 ConsolePal.WindowWidth = value;
             }
@@ -429,10 +426,7 @@ namespace System
                     throw new IOException(SR.InvalidOperation_SetWindowSize);
                 }
 
-                if (value <= 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, SR.ArgumentOutOfRange_NeedPosNum);
-                }
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
 
                 ConsolePal.WindowHeight = value;
             }
@@ -455,15 +449,8 @@ namespace System
                 throw new IOException(SR.InvalidOperation_SetWindowSize);
             }
 
-            if (width <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(width), width, SR.ArgumentOutOfRange_NeedPosNum);
-            }
-
-            if (height <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(height), height, SR.ArgumentOutOfRange_NeedPosNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 
             ConsolePal.SetWindowSize(width, height);
         }
@@ -662,10 +649,7 @@ namespace System
         public static Stream OpenStandardInput(int bufferSize)
         {
             // bufferSize is ignored, other than in argument validation, even in the .NET Framework
-            if (bufferSize < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(bufferSize), SR.ArgumentOutOfRange_NeedNonNegNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
             return ConsolePal.OpenStandardInput();
         }
 
@@ -677,10 +661,7 @@ namespace System
         public static Stream OpenStandardOutput(int bufferSize)
         {
             // bufferSize is ignored, other than in argument validation, even in the .NET Framework
-            if (bufferSize < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(bufferSize), SR.ArgumentOutOfRange_NeedNonNegNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
             return ConsolePal.OpenStandardOutput();
         }
 
@@ -692,10 +673,7 @@ namespace System
         public static Stream OpenStandardError(int bufferSize)
         {
             // bufferSize is ignored, other than in argument validation, even in the .NET Framework
-            if (bufferSize < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(bufferSize), SR.ArgumentOutOfRange_NeedNonNegNum);
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
             return ConsolePal.OpenStandardError();
         }
 
@@ -718,7 +696,15 @@ namespace System
         {
             ArgumentNullException.ThrowIfNull(newOut);
 
-            newOut = TextWriter.Synchronized(newOut);
+            // Ensure all access to the writer is synchronized. If it's the known Null
+            // singleton writer, which may be used if someone wants to suppress all
+            // console output, we needn't add synchronization because all operations
+            // are nops.
+            if (newOut != TextWriter.Null)
+            {
+                newOut = TextWriter.Synchronized(newOut);
+            }
+
             lock (s_syncObject)
             {
                 s_isOutTextWriterRedirected = true;
@@ -730,7 +716,12 @@ namespace System
         {
             ArgumentNullException.ThrowIfNull(newError);
 
-            newError = TextWriter.Synchronized(newError);
+            // Ensure all access to the writer is synchronized. See comment in SetOut.
+            if (newError != TextWriter.Null)
+            {
+                newError = TextWriter.Synchronized(newError);
+            }
+
             lock (s_syncObject)
             {
                 s_isErrorTextWriterRedirected = true;

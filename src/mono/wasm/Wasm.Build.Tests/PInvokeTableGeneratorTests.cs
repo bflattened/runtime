@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 
 namespace Wasm.Build.Tests
 {
-    public class PInvokeTableGeneratorTests : BuildTestBase
+    public class PInvokeTableGeneratorTests : TestMainJsTestBase
     {
         public PInvokeTableGeneratorTests(ITestOutputHelper output, SharedBuildPerTestClassFixture buildContext)
             : base(output, buildContext)
@@ -375,7 +375,7 @@ namespace Wasm.Build.Tests
             Assert.Matches("warning\\sWASM0001.*Skipping.*Test::SomeFunction1.*because.*function\\spointer", output);
         }
 
-        [ConditionalTheory(typeof(BuildTestBase), nameof(IsUsingWorkloads))]
+        [Theory]
         [BuildAndRun(host: RunHost.None)]
         public void IcallWithOverloadedParametersAndEnum(BuildArgs buildArgs, string id)
         {
@@ -466,14 +466,28 @@ namespace Wasm.Build.Tests
             string tasksDir = Path.Combine(s_buildEnv.WorkloadPacksDir,
                                                               "Microsoft.NET.Runtime.WebAssembly.Sdk",
                                                               s_buildEnv.GetRuntimePackVersion(DefaultTargetFramework),
-                                                              "tasks");
-            if (!Directory.Exists(tasksDir))
+                                                              "tasks",
+                                                              BuildTestBase.DefaultTargetFramework); // not net472!
+            if (!Directory.Exists(tasksDir)) {
+                string? tasksDirParent = Path.GetDirectoryName (tasksDir);
+                if (!string.IsNullOrEmpty (tasksDirParent)) {
+                    if (!Directory.Exists(tasksDirParent)) {
+                        _testOutput.WriteLine($"Expected {tasksDirParent} to exist and contain TFM subdirectories");
+                    }
+                    _testOutput.WriteLine($"runtime pack tasks dir {tasksDir} contains subdirectories:");
+                    foreach (string subdir in Directory.EnumerateDirectories(tasksDirParent)) {
+                        _testOutput.WriteLine($"  - {subdir}");
+                    }
+                }
                 throw new DirectoryNotFoundException($"Could not find tasks directory {tasksDir}");
+            }
 
             string? taskPath = Directory.EnumerateFiles(tasksDir, "WasmAppBuilder.dll", SearchOption.AllDirectories)
                                             .FirstOrDefault();
             if (string.IsNullOrEmpty(taskPath))
                 throw new FileNotFoundException($"Could not find WasmAppBuilder.dll in {tasksDir}");
+
+            _testOutput.WriteLine ("Using WasmAppBuilder.dll from {0}", taskPath);
 
             projectCode = projectCode
                 .Replace("###WasmPInvokeModule###", AddAssembly("System.Private.CoreLib") + AddAssembly("System.Runtime") + AddAssembly(libraryBuildArgs.ProjectName))

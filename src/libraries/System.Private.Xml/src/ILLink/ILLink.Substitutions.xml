@@ -1,5 +1,8 @@
 <linker>
-  <type fullname="System.Xml.XmlDownloadManager" featurevalue="false" feature="System.Xml.XmlDownloadManager.IsNonFileStreamSupported">
-    <method signature="System.Threading.Tasks.Task`1&lt;System.IO.Stream&gt; GetNonFileStreamAsync(System.Uri,System.Net.ICredentials,System.Net.IWebProxy)" body="remove" />
-  </type>
+  <assembly fullname="System.Private.Xml">
+    <type fullname="System.Xml.LocalAppContextSwitches">
+      <method signature="System.Boolean get_IsNetworkingEnabledByDefault()" body="stub" value="false"
+              feature="System.Xml.XmlResolver.IsNetworkingEnabledByDefault" featurevalue="false" />
+    </type>
+  </assembly>
 </linker>

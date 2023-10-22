@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Sdk;
 
 namespace System.Reflection.Tests
 {
@@ -205,7 +206,6 @@ namespace System.Reflection.Tests
         [InlineData("DummyMethod1", "DummyMethod1", true)]
         //Verify two different MethodInfo objects are not equal
         [InlineData("DummyMethod1", "DummyMethod2", false)]
-
         public void Equality1(string str1, string str2, bool expected)
         {
             MethodInfo mi1 = GetMethod(typeof(MethodInfoTests), str1);
@@ -717,7 +717,7 @@ namespace System.Reflection.Tests
             Assert.Equal(YesNo.No, method.Invoke(null, new object?[] { YesNo.No }));
             Assert.Equal(YesNo.Yes, method.Invoke(null, new object?[] { YesNo.Yes }));
             Assert.Equal(YesNo.No, method.Invoke(null, new object?[] { Type.Missing }));
-        } 
+        }
 
         [Fact]
         public static void InvokeNullableEnumParameterDefaultYes()
@@ -892,6 +892,69 @@ namespace System.Reflection.Tests
         {
             Assembly asm = (Assembly)mi.Invoke(null, null);
             Assert.Contains("TestAssembly", asm.ToString());
+        }
+
+        [Fact]
+        private static unsafe void TestFunctionPointerDirect()
+        {
+            // Sanity checks for direct invocation.
+            void* fn = FunctionPointerMethods.GetFunctionPointer();
+            Assert.True(FunctionPointerMethods.GetFunctionPointer()(42));
+            Assert.True(FunctionPointerMethods.CallFcnPtr_IntPtr((IntPtr)fn, 42));
+            Assert.True(FunctionPointerMethods.CallFcnPtr_Void(fn, 42));
+            Assert.False(FunctionPointerMethods.GetFunctionPointer()(41));
+            Assert.False(FunctionPointerMethods.CallFcnPtr_IntPtr((IntPtr)fn, 41));
+            Assert.False(FunctionPointerMethods.CallFcnPtr_Void(fn, 41));
+        }
+
+        [Fact]
+        private static unsafe void TestFunctionPointerAsIntPtrArgType()
+        {
+            void* fn = FunctionPointerMethods.GetFunctionPointer();
+
+            MethodInfo m;
+
+            m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.CallFcnPtr_IntPtr));
+            Assert.True((bool)m.Invoke(null, new object[] { (IntPtr)fn, 42 }));
+            Assert.False((bool)m.Invoke(null, new object[] { (IntPtr)fn, 41 }));
+
+            m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.CallFcnPtr_Void));
+            Assert.True((bool)m.Invoke(null, new object[] { (IntPtr)fn, 42 }));
+            Assert.False((bool)m.Invoke(null, new object[] { (IntPtr)fn, 41 }));
+        }
+
+        [Fact]
+        private static unsafe void TestFunctionPointerAsUIntPtrArgType()
+        {
+            void* fn = FunctionPointerMethods.GetFunctionPointer();
+
+            MethodInfo m;
+
+            m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.CallFcnPtr_UIntPtr));
+            Assert.True((bool)m.Invoke(null, new object[] { (UIntPtr)fn, 42 }));
+            Assert.False((bool)m.Invoke(null, new object[] { (UIntPtr)fn, 41 }));
+
+            m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.CallFcnPtr_Void));
+            Assert.True((bool)m.Invoke(null, new object[] { (UIntPtr)fn, 42 }));
+            Assert.False((bool)m.Invoke(null, new object[] { (UIntPtr)fn, 41 }));
+        }
+
+        [Fact]
+        private static unsafe void TestFunctionPointerAsArgType()
+        {
+            void* fn = FunctionPointerMethods.GetFunctionPointer();
+            MethodInfo m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.CallFcnPtr_FP));
+            Assert.True((bool)m.Invoke(null, new object[] { (IntPtr)fn, 42 }));
+            Assert.False((bool)m.Invoke(null, new object[] { (IntPtr)fn, 41 }));
+        }
+
+        [Fact]
+        private static unsafe void TestFunctionPointerAsReturnType()
+        {
+            MethodInfo m = GetMethod(typeof(FunctionPointerMethods), nameof(FunctionPointerMethods.GetFunctionPointer));
+            object ret = m.Invoke(null, null);
+            Assert.IsType<IntPtr>(ret);
+            Assert.True((IntPtr)ret != 0);
         }
 
         //Methods for Reflection Metadata
@@ -1292,6 +1355,35 @@ namespace System.Reflection.Tests
             return yesNo;
         }
     }
+
+    public static class FunctionPointerMethods
+    {
+        public static bool CallMe(int i)
+        {
+            return i == 42;
+        }
+
+        public static unsafe bool CallFcnPtr_FP(delegate*<int, bool> fn, int value)
+        {
+            return fn(value);
+        }
+
+        public static unsafe bool CallFcnPtr_IntPtr(IntPtr fn, int value)
+        {
+            return ((delegate*<int, bool>)fn)(value);
+        }
+
+        public static unsafe bool CallFcnPtr_UIntPtr(UIntPtr fn, int value)
+        {
+            return ((delegate*<int, bool>)fn)(value);
+        }
+
+        public static unsafe bool CallFcnPtr_Void(void* fn, int value)
+        {
+            return ((delegate*<int, bool>)fn)(value);
+        }
+
+        public static unsafe delegate*<int, bool> GetFunctionPointer() => &CallMe;
+    }
 #pragma warning restore 0414
 }
-

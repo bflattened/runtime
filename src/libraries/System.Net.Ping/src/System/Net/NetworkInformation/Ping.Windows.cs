@@ -162,7 +162,7 @@ namespace System.Net.NetworkInformation
             }
         }
 
-        private int SendEcho(IPAddress address, byte[] buffer, int timeout, PingOptions? options, bool isAsync)
+        private unsafe int SendEcho(IPAddress address, byte[] buffer, int timeout, PingOptions? options, bool isAsync)
         {
             Interop.IpHlpApi.IP_OPTION_INFORMATION ipOptions = new Interop.IpHlpApi.IP_OPTION_INFORMATION(options);
             if (!_ipv6)
@@ -183,9 +183,11 @@ namespace System.Net.NetworkInformation
                     (uint)timeout);
             }
 
-            IPEndPoint ep = new IPEndPoint(address, 0);
-            Internals.SocketAddress remoteAddr = IPEndPointExtensions.Serialize(ep);
-            byte[] sourceAddr = new byte[28];
+            Span<byte> remoteAddr = stackalloc byte[SocketAddressPal.IPv6AddressSize];
+            IPEndPointExtensions.SetIPAddress(remoteAddr, address);
+
+            Span<byte> sourceAddr = stackalloc byte[SocketAddressPal.IPv6AddressSize];
+            sourceAddr.Clear();
 
             return (int)Interop.IpHlpApi.Icmp6SendEcho2(
                 _handlePingV6!,
@@ -193,7 +195,7 @@ namespace System.Net.NetworkInformation
                 IntPtr.Zero,
                 IntPtr.Zero,
                 sourceAddr,
-                remoteAddr.Buffer,
+                remoteAddr,
                 _requestBuffer!,
                 (ushort)buffer.Length,
                 ref ipOptions,

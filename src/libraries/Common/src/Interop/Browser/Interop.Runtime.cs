@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 
 internal static partial class Interop
 {
+    // WARNING: until https://github.com/dotnet/runtime/issues/37955 is fixed
+    // make sure that the native side always sets the out parameters
+    // otherwise out parameters could stay un-initialized, when the method is used in inlined context
     internal static unsafe partial class Runtime
     {
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
@@ -24,6 +27,13 @@ internal static partial class Interop
         public static extern IntPtr RegisterGCRoot(IntPtr start, int bytesSize, IntPtr name);
         [MethodImpl(MethodImplOptions.InternalCall)]
         public static extern void DeregisterGCRoot(IntPtr handle);
+
+#if FEATURE_WASM_THREADS
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public static extern void InstallWebWorkerInterop(bool installJSSynchronizationContext);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public static extern void UninstallWebWorkerInterop(bool uninstallJSSynchronizationContext);
+#endif
 
         #region Legacy
 

@@ -11,12 +11,18 @@ namespace System.Runtime.InteropServices.JavaScript
         public Uint8Array(int length)
             : base(JavaScriptImports.CreateCSOwnedObject(nameof(Uint8Array), new object[] { length }))
         {
+#if FEATURE_WASM_THREADS
+            LegacyHostImplementation.ThrowIfLegacyWorkerThread();
+#endif
             LegacyHostImplementation.RegisterCSOwnedObject(this);
         }
 
         public Uint8Array(ArrayBuffer buffer)
             : base(JavaScriptImports.CreateCSOwnedObject(nameof(Uint8Array), new object[] { buffer }))
         {
+#if FEATURE_WASM_THREADS
+            LegacyHostImplementation.ThrowIfLegacyWorkerThread();
+#endif
             LegacyHostImplementation.RegisterCSOwnedObject(this);
         }
 
@@ -36,7 +42,6 @@ namespace System.Runtime.InteropServices.JavaScript
 
         public static implicit operator Uint8Array(Span<byte> span) => From(span);
 
-        [MethodImpl(MethodImplOptions.NoInlining)] // https://github.com/dotnet/runtime/issues/71425
         public byte[] ToArray()
         {
             this.AssertNotDisposed();
@@ -48,13 +53,15 @@ namespace System.Runtime.InteropServices.JavaScript
             return (byte[])res;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)] // https://github.com/dotnet/runtime/issues/71425
         public static unsafe Uint8Array From(ReadOnlySpan<byte> span)
         {
+#if FEATURE_WASM_THREADS
+            LegacyHostImplementation.ThrowIfLegacyWorkerThread();
+#endif
             // source has to be instantiated.
             if (span == null)
             {
-                throw new System.ArgumentException(SR.Format(SR.ArgumentCannotBeNull, nameof(span)));
+                throw new System.ArgumentException(SR.Format(SR.ArgumentCannotBeNull, nameof(span)), nameof(span));
             }
 
             ReadOnlySpan<byte> bytes = MemoryMarshal.AsBytes(span);
@@ -67,7 +74,6 @@ namespace System.Runtime.InteropServices.JavaScript
                 r.ReleaseInFlight();
                 return r;
             }
-
         }
 
         public enum TypedArrayTypeCode

@@ -11,7 +11,7 @@ using System.Collections;
 
 namespace System.DirectoryServices.AccountManagement
 {
-    [System.Diagnostics.DebuggerDisplay("Name ( {Name} )")]
+    [System.Diagnostics.DebuggerDisplay("Name = {Name}")]
     public abstract class Principal : IDisposable
     {
         //
@@ -892,7 +892,7 @@ namespace System.DirectoryServices.AccountManagement
             if (_isDeleted)
             {
                 GlobalDebug.WriteLineIf(GlobalDebug.Warn, "Principal", "CheckDisposedOrDeleted: accessing deleted object");
-                throw new InvalidOperationException(SR.PrincipalDeleted);
+                throw new InvalidOperationException(SR.PrincipalAccessedAfterBeingDeleted);
             }
         }
 
