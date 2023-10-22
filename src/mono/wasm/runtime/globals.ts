@@ -15,8 +15,8 @@ export let Module: DotnetModuleInternal;
 export let INTERNAL: any;
 
 export const ENVIRONMENT_IS_NODE = typeof process == "object" && typeof process.versions == "object" && typeof process.versions.node == "string";
-export const ENVIRONMENT_IS_WEB = typeof window == "object";
 export const ENVIRONMENT_IS_WORKER = typeof importScripts == "function";
+export const ENVIRONMENT_IS_WEB = typeof window == "object" || (ENVIRONMENT_IS_WORKER && !ENVIRONMENT_IS_NODE);
 export const ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
 // these are imported and re-exported from emscripten internals
 export let ENVIRONMENT_IS_PTHREAD: boolean;
@@ -59,7 +59,6 @@ export function setRuntimeGlobals(globalObjects: GlobalObjects) {
         gitHash,
         allAssetsInMemory: createPromiseController<void>(),
         dotnetReady: createPromiseController<any>(),
-        memorySnapshotSkippedOrDone: createPromiseController<void>(),
         afterInstantiateWasm: createPromiseController<void>(),
         beforePreInit: createPromiseController<void>(),
         afterPreInit: createPromiseController<void>(),
@@ -67,6 +66,12 @@ export function setRuntimeGlobals(globalObjects: GlobalObjects) {
         beforeOnRuntimeInitialized: createPromiseController<void>(),
         afterOnRuntimeInitialized: createPromiseController<void>(),
         afterPostRun: createPromiseController<void>(),
+        mono_wasm_exit: () => {
+            throw new Error("Mono shutdown");
+        },
+        abort: (reason: any) => {
+            throw reason;
+        }
     });
 
     Object.assign(globalObjects.module.config!, {}) as any;

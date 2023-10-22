@@ -33,7 +33,6 @@
     <_EmccDefaultsRspPath>$(NativeBinDir)src\emcc-default.rsp</_EmccDefaultsRspPath>
     <_EmccCompileRspPath>$(NativeBinDir)src\emcc-compile.rsp</_EmccCompileRspPath>
     <_EmccLinkRspPath>$(NativeBinDir)src\emcc-link.rsp</_EmccLinkRspPath>
-    <WasmNativeStrip Condition="'$(ContinuousIntegrationBuild)' == 'true'">false</WasmNativeStrip>
     <EmSdkLLVMAr>$(EMSDK_PATH)\upstream\bin\llvm-ar</EmSdkLLVMAr>
     <EmSdkLLVMAr Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(EmSdkLLVMAr).exe</EmSdkLLVMAr>
   </PropertyGroup>
@@ -388,7 +387,8 @@
       <CMakeBuildRuntimeConfigureCmd>$(CMakeBuildRuntimeConfigureCmd) -DICU_LIB_DIR=&quot;$(ICULibDir.TrimEnd('\/').Replace('\','/'))&quot;</CMakeBuildRuntimeConfigureCmd>
       <CMakeBuildRuntimeConfigureCmd>$(CMakeBuildRuntimeConfigureCmd) -DMONO_ARTIFACTS_DIR=&quot;$(MonoArtifactsPath.TrimEnd('\/').Replace('\','/'))&quot;</CMakeBuildRuntimeConfigureCmd>
       <CMakeBuildRuntimeConfigureCmd>$(CMakeBuildRuntimeConfigureCmd) -DNATIVE_BIN_DIR=&quot;$(NativeBinDir.TrimEnd('\/').Replace('\','/'))&quot;</CMakeBuildRuntimeConfigureCmd>
-      <CMakeBuildRuntimeConfigureCmd Condition="'$(WasmEnableSIMD)' == 'true'">$(CMakeBuildRuntimeConfigureCmd) -DCONFIGURATION_COMPILE_OPTIONS=&quot;-msimd128&quot;</CMakeBuildRuntimeConfigureCmd>
+      <CMakeBuildRuntimeConfigureCmd Condition="'$(WasmEnableSIMD)' == 'true'">$(CMakeBuildRuntimeConfigureCmd) -DCONFIGURATION_COMPILE_OPTIONS=&quot;-msimd128&quot; -DCONFIGURATION_INTERPSIMDTABLES_LIB=&quot;simd&quot;</CMakeBuildRuntimeConfigureCmd>
+      <CMakeBuildRuntimeConfigureCmd Condition="'$(WasmEnableSIMD)' != 'true'">$(CMakeBuildRuntimeConfigureCmd) -DCONFIGURATION_INTERPSIMDTABLES_LIB=&quot;nosimd&quot;</CMakeBuildRuntimeConfigureCmd>
       <CMakeBuildRuntimeConfigureCmd Condition="'$(MonoWasmThreads)' == 'true'">$(CMakeBuildRuntimeConfigureCmd) -DDISABLE_THREADS=0</CMakeBuildRuntimeConfigureCmd>
       <CMakeBuildRuntimeConfigureCmd Condition="'$(WasmEnableLegacyJsInterop)' == 'false'">$(CMakeBuildRuntimeConfigureCmd) -DDISABLE_LEGACY_JS_INTEROP=1</CMakeBuildRuntimeConfigureCmd>
       <CMakeBuildRuntimeConfigureCmd>$(CMakeBuildRuntimeConfigureCmd) $(CMakeConfigurationEmsdkPath)</CMakeBuildRuntimeConfigureCmd>

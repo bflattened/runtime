@@ -63,14 +63,17 @@
         <ExcludeList Include="$(XunitTestBinBase)/Loader/binding/tracing/BinderTracingTest.Basic/*">
             <Issue>https://github.com/dotnet/runtime/issues/57786</Issue>
         </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/Loader/binding/tracing/BinderTracingTest.ResolutionFlow/*">
+            <Issue>https://github.com/dotnet/runtime/issues/90580</Issue>
+        </ExcludeList>
         <ExcludeList Include="$(XunitTestBinBase)/Interop/MonoAPI/**">
             <Issue>CoreCLR does not implement the mono embedding API</Issue>
         </ExcludeList>
         <ExcludeList Include="$(XunitTestBinBase)/GC/Regressions/Github/Runtime_76219/Runtime_76219/*">
             <Issue>https://github.com/dotnet/runtime/issues/78899</Issue>
         </ExcludeList>
-        <ExcludeList Include="$(XunitTestBinBase)/JIT/Regression/JitBlue/Runtime_82535/Runtime_82535/*">
-          <Issue>https://github.com/dotnet/runtime/issues/89585</Issue>
+        <ExcludeList Include="$(XunitTestBinBase)/readytorun/GenericCycleDetection/Depth3Test/*">
+          <Issue>https://github.com/dotnet/runtime/issues/88586</Issue>
         </ExcludeList>
     </ItemGroup>
 
@@ -691,6 +694,9 @@
 
     <!-- NativeAOT specific -->
     <ItemGroup Condition="'$(XunitTestBinBase)' != '' and '$(TestBuildMode)' == 'nativeaot' and '$(RuntimeFlavor)' == 'coreclr'">
+        <ExcludeList Condition="'$(RuntimeConfiguration)' == 'checked'" Include="$(XunitTestBinBase)/JIT/Generics/Exceptions/GenericCatchInterfaceProgram/**">
+            <Issue>https://github.com/dotnet/runtime/issues/90848</Issue>
+        </ExcludeList>
         <ExcludeList Include="$(XunitTestBinBase)/Loader/classloader/StaticVirtualMethods/Regression/GetInterfaceMapWithStaticVirtualsAndConstraints/**">
             <Issue>https://github.com/dotnet/runtime/issues/89157</Issue>
         </ExcludeList>
@@ -1156,6 +1162,7 @@
         <ExcludeList Include="$(XunitTestBinBase)/JIT/Methodical\VT\port\huge_gcref_d\*" />
         <ExcludeList Include="$(XunitTestBinBase)/JIT/Methodical\VT\port\huge_gcref_r\*" />
         <ExcludeList Include="$(XunitTestBinBase)/JIT/Performance/CodeQuality/Benchstones/MDBenchI/MDGeneralArray/MDGeneralArray/*" />
+        <ExcludeList Include="$(XunitTestBinBase)/Loader/classloader/regressions/GitHub_93597/GitHub_93597/*" />
 
         <!-- Covariant returns -->
         <!-- https://github.com/dotnet/runtimelab/issues/205 -->
@@ -1174,6 +1181,10 @@
 
         <!-- Requires Debug build -->
         <ExcludeList Include="$(XunitTestBinBase)/JIT\Directed\debugging\poisoning\poison\*" />
+
+        <ExcludeList Include="$(XunitTestBinBase)/Loader/CustomAttributes/**">
+            <Issue>Dynamic code generation is not supported on this platform</Issue>
+        </ExcludeList>
     </ItemGroup>
 
     <!-- run.proj finds all the *.cmd/*.sh scripts in a test folder and creates corresponding test methods.
@@ -2705,6 +2716,9 @@
         <ExcludeList Include="$(XunitTestBinBase)/Exceptions/ForeignThread/ForeignThreadExceptions/**">
             <Issue>https://github.com/dotnet/runtime/issues/82859</Issue>
         </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/tracing/runtimeeventsource/nativeruntimeeventsource/**">
+            <Issue>https://github.com/dotnet/runtime/issues/90605</Issue>
+        </ExcludeList>
     </ItemGroup>
 
     <ItemGroup Condition=" '$(RuntimeFlavor)' == 'mono' and '$(TargetArchitecture)' == 'arm64' and '$(TargetsWindows)' != 'true' " >
@@ -2927,6 +2941,9 @@
             <Issue>https://github.com/dotnet/runtime/issues/64127</Issue>
         </ExcludeList>
         <ExcludeList Include="$(XunitTestBinBase)/Interop/PInvoke/SetLastError/**">
+            <Issue>https://github.com/dotnet/runtime/issues/64127</Issue>
+        </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/Interop/StructMarshalling/PInvoke/NestedStruct/**">
             <Issue>https://github.com/dotnet/runtime/issues/64127</Issue>
         </ExcludeList>
         <ExcludeList Include = "$(XunitTestBinBase)/Interop/SuppressGCTransition/SuppressGCTransitionTest/**">
@@ -3482,8 +3499,14 @@
         <ExcludeList Include = "$(XunitTestBinBase)/Loader/classloader/StaticVirtualMethods/GenericContext/**">
             <Issue>https://github.com/dotnet/runtime/issues/67359</Issue>
         </ExcludeList>
-        <ExcludeList Include="$(XunitTestBinBase)/Loader/classloader/InlineArray/**">
-            <Issue>https://github.com/dotnet/runtime/issues/90398</Issue>
+        <ExcludeList Include="$(XunitTestBinBase)/Interop/StructMarshalling/PInvoke/NestedStruct/**">
+            <Issue>https://github.com/dotnet/runtime/issues/91388</Issue>
+        </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/Interop/NativeLibrary/MainProgramHandle/MainProgramHandleTests/**">
+            <Issue>https://github.com/dotnet/runtime/issues/91388</Issue>
+        </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/Interop/DllImportSearchPaths/DllImportSearchPathsTest/**">
+            <Issue>https://github.com/dotnet/runtime/issues/91388</Issue>
         </ExcludeList>
     </ItemGroup>
 
@@ -3716,6 +3739,9 @@
         </ExcludeList>
         <ExcludeList Include="$(XunitTestBinBase)/tracing/eventpipe/gcdump/**">
             <Issue>https://github.com/dotnet/runtime/issues/90012</Issue>
+        </ExcludeList>
+        <ExcludeList Include="$(XunitTestBinBase)/Loader/CustomAttributes/**">
+            <Issue>Dynamic code generation is not supported on this platform</Issue>
         </ExcludeList>
     </ItemGroup>
 

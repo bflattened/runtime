@@ -147,6 +147,16 @@
         <target state="translated">L'hosting COM .NET con 'EnableComHosting' non supporta le interfacce con 'GeneratedComInterfaceAttribute'.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ComInterfaceUsageDoesNotFollowBestPracticesMessageWithDetails">
+        <source>The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations. {0}</source>
+        <target state="translated">L'utilizzo di 'GeneratedComInterfaceAttribute' non segue le raccomandazioni.{0}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ComInterfaceUsageDoesNotFollowBestPracticesTitle">
+        <source>The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations.</source>
+        <target state="translated">L'utilizzo di 'GeneratedComInterfaceAttribute' non segue le raccomandazioni.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ComMethodReturningIntWillBeOutParameterMessage">
         <source>The return value in the managed definition will be converted to an 'out' parameter when calling the unmanaged COM method. If the return value is intended to be the HRESULT code returned by the unmanaged COM method, use '[PreserveSig]' on the method.</source>
         <target state="translated">Il valore restituito nella definizione gestita verrà convertito in un parametro 'out' quando si chiama il metodo COM non gestito. Se il valore restituito deve essere il codice HRESULT restituito dal metodo COM non gestito, utilizzare '[PreserveSig]' sul metodo.</target>
@@ -439,12 +449,17 @@
       </trans-unit>
       <trans-unit id="HResultTypeWillBeTreatedAsStructMessage">
         <source>The type '{0}' will be treated as a struct in the native signature, not as a native HRESULT. To treat this as an HRESULT, add '[return:MarshalAs(UnmanagedType.Error)]' to the method.</source>
-        <target state="new">The type '{0}' will be treated as a struct in the native signature, not as a native HRESULT. To treat this as an HRESULT, add '[return:MarshalAs(UnmanagedType.Error)]' to the method.</target>
+        <target state="translated">Il tipo '{0}' verrà considerato come uno struct nella firma nativa, non come HRESULT nativo. Per considerare questo valore come HRESULT, aggiungere '[return:MarshalAs(UnmanagedType.Error)]' al metodo.</target>
         <note />
       </trans-unit>
       <trans-unit id="HResultTypeWillBeTreatedAsStructTitle">
         <source>This type will be treated as a struct in the native signature, not as a native HRESULT</source>
-        <target state="new">This type will be treated as a struct in the native signature, not as a native HRESULT</target>
+        <target state="translated">Questo tipo verrà considerato come uno struct nella firma nativa, non come HRESULT nativo</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InAttributeNotSupportedOnByValueParameters">
+        <source>The '[In]' attribute is only supported on array parameters. By-value parameters are considered read-only by default.</source>
+        <target state="translated">L'attributo '[In]' è supportato solo sui parametri di matrice. I parametri per valore sono considerati di sola lettura per impostazione predefinita.</target>
         <note />
       </trans-unit>
       <trans-unit id="InAttributeNotSupportedWithoutOutBlittableArray">
@@ -465,6 +480,11 @@
       <trans-unit id="InOutAttributeMarshalerNotSupported">
         <source>The provided '[In]' and '[Out]' attributes on this parameter are unsupported on this parameter.</source>
         <target state="translated">Gli attributi '[In]' e '[Out]' specificati per questo parametro non sono supportati in questo parametro.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InOutAttributeNotSupportedOnByValueParameters">
+        <source>The '[In]' and '[Out]' attributes are only supported on array parameters. Consider using the 'ref' keyword to make the parameter mutable.</source>
+        <target state="translated">Gli attributi [In]' e '[Out]' sono supportati solo nei parametri di matrice. Provare a usare le parole chiave 'ref' per rendere modificabile il parametro.</target>
         <note />
       </trans-unit>
       <trans-unit id="InOutAttributes">
@@ -702,6 +722,16 @@
         <target state="translated">Utilizzo di 'VirtualMethodIndexAttribute' non valido</target>
         <note />
       </trans-unit>
+      <trans-unit id="LibraryImportUsageDoesNotFollowBestPracticesMessageWithDetails">
+        <source>The usage of 'LibraryImportAttribute' does not follow recommendations. {0}</source>
+        <target state="translated">L'utilizzo di 'LibraryImportAttribute' non segue le raccomandazioni. {0}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="LibraryImportUsageDoesNotFollowBestPracticesTitle">
+        <source>The usage of 'LibraryImportAttribute' does not follow recommendations.</source>
+        <target state="translated">L'utilizzo di 'LibraryImportAttribute' non segue le raccomandazioni.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="LinearCollectionElementTypesMustMatchDescription">
         <source>The element type of the 'ReadOnlySpan' returned by 'GetManagedValuesSource' must be the same as the element type returned by 'GetManagedValuesDestination'.</source>
         <target state="translated">Il tipo di elemento di 'ReadOnlySpan' restituito da 'GetManagedValuesSource' deve essere uguale al tipo di elemento restituito da 'GetManagedValuesDestination'.</target>
@@ -903,7 +933,7 @@
         <note />
       </trans-unit>
       <trans-unit id="OutAttributeNotSupportedOnByValueParameters">
-        <source>The `[Out]` attribute is only supported on array parameters. Consider using 'out' or 'ref' keywords to make the parameter mutable.</source>
+        <source>The '[Out]' attribute is only supported on array parameters. Consider using 'out' or 'ref' keywords to make the parameter mutable.</source>
         <target state="translated">L'attributo '[Out]' è supportato solo nei parametri di matrice. Provare a usare le parole chiave 'out' o 'ref' per rendere modificabile il parametro.</target>
         <note />
       </trans-unit>
@@ -915,6 +945,11 @@
       <trans-unit id="OutRequiresToManagedMessage">
         <source>The type '{0}' specifies it supports marshalling in the 'Out' direction, but it does not provide a 'ToManaged' method that returns the managed type</source>
         <target state="translated">Il tipo '{0}' specifica che supporta il marshalling nella direzione 'Out', ma non fornisce un metodo 'ToManaged' che restituisce il tipo gestito</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="PreferExplicitInOutAttributesOnArrays">
+        <source>It is recommended to use explicit '[In]' and '[Out]' attributes on array parameters.</source>
+        <target state="translated">È consigliabile usare attributi '[In]' e '[Out]' espliciti nei parametri di matrice.</target>
         <note />
       </trans-unit>
       <trans-unit id="RequiresAllowUnsafeBlocksDescriptionCom">

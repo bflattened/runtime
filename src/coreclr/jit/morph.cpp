@@ -8919,6 +8919,14 @@ GenTree* Compiler::fgMorphSmpOp(GenTree* tree, MorphAddrContext* mac, bool* optA
             break;
 #endif
 
+        case GT_COMMA:
+            if (op2->OperIsStore() || (op2->OperGet() == GT_COMMA && op2->TypeGet() == TYP_VOID) || fgIsThrow(op2))
+            {
+                typ = tree->gtType = TYP_VOID;
+            }
+
+            break;
+
         default:
             break;
     }
@@ -10770,6 +10778,12 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
                 break;
             }
 
+            // Must be working with the same types of vectors.
+            if (hwop1->TypeGet() != node->TypeGet())
+            {
+                break;
+            }
+
             if (toScalar != nullptr)
             {
                 DEBUG_DESTROY_NODE(toScalar);
@@ -10793,8 +10807,6 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
         }
 
 #if defined(TARGET_XARCH)
-        case NI_AVX512F_Add:
-        case NI_AVX512BW_Add:
         case NI_AVX512F_And:
         case NI_AVX512DQ_And:
         case NI_AVX512F_AndNot:
@@ -10836,13 +10848,6 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
 
             switch (intrinsicId)
             {
-                case NI_AVX512F_Add:
-                case NI_AVX512BW_Add:
-                {
-                    maskIntrinsicId = NI_AVX512F_AddMask;
-                    break;
-                }
-
                 case NI_AVX512F_And:
                 case NI_AVX512DQ_And:
                 {
