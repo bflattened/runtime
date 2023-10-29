@@ -28,6 +28,10 @@ jobs:
             arch: x64
             vm: ubuntu-latest
             crossrootfs: /crossrootfs/x64
+          - os: linux-bionic
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-android-amd64
+            arch: arm64
+            vm: ubuntu-latest
           - os: windows
             arch: x64
             vm: windows-latest
@@ -44,7 +48,10 @@ jobs:
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
-        if: ${{ matrix.vm == 'ubuntu-latest' }}
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
+      - name: Build the product (Linux Bionic)
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+libs.native+libs.sfx -c Release -os ${{ matrix.os }} -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os == 'linux-bionic' }}
       - name: Build the product (Windows)
         shell: cmd
         run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
@@ -67,7 +74,7 @@ jobs:
           cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
           cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
           ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
-        if: ${{ matrix.vm == 'ubuntu-latest' }}
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
       - name: ZIP native compiler (Windows)
         run: |
           mkdir artifacts\bflat-compiler-native
@@ -86,6 +93,7 @@ jobs:
         with:
           name: native-compiler
           path: artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
+        if: ${{ matrix.os != 'linux-bionic' }}
 
       - name: ZIP libs (Linux)
         run: |
@@ -270,4 +278,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: libs/bflat-libs-linux-glibc-arm64.zip
           asset_name: bflat-libs-linux-glibc-arm64.zip
+          asset_content_type: application/zip
+
+      - name: Upload libs (linux-bionic-arm64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: libs/bflat-libs-linux-bionic-arm64.zip
+          asset_name: bflat-libs-linux-bionic-arm64.zip
           asset_content_type: application/zip
