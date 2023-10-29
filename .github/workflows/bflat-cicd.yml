@@ -66,7 +66,7 @@ jobs:
           mkdir artifacts/bflat-compiler-native
           cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
           cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
-          zip -jr artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: ZIP native compiler (Windows)
         run: |
@@ -93,7 +93,7 @@ jobs:
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/lib/net8.0/*
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/native/*.Native.*a
           cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/aotsdk/*
-          zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: ZIP libs (Windows)
         run: |
@@ -116,7 +116,7 @@ jobs:
         run: |
           mkdir artifacts/bflat-refs
           cp -t artifacts/bflat-refs artifacts/bin/microsoft.netcore.app.ref/ref/net8.0/*.dll
-          zip -jr artifacts/bflat-refs.zip artifacts/bflat-refs
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-refs.zip artifacts/bflat-refs
 
       - name: Archive refs
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' }}
