@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [ bflat-main, bflat-release/7.0 ]
+    branches: [ bflat-main, bflat-release/7.0, bflat-release/8.0 ]
 
   workflow_dispatch:
     inputs:
@@ -19,14 +19,15 @@ jobs:
       matrix:
         include:
           - os: linux-glibc
-            container: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm64
             arch: arm64
             vm: ubuntu-latest
             crossrootfs: /crossrootfs/arm64
           - os: linux-glibc
-            container: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-20210714125435-9b5bbc2
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64
             arch: x64
             vm: ubuntu-latest
+            crossrootfs: /crossrootfs/x64
           - os: windows
             arch: x64
             vm: windows-latest
@@ -40,13 +41,10 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Build the product (Linux)
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
-      - name: Build the product (Linux cross)
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
         run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
+        if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: Build the product (Windows)
         shell: cmd
         run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
