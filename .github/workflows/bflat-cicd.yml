@@ -43,16 +43,16 @@ jobs:
       - name: Build the product (Linux)
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: Build the product (Windows)
         shell: cmd
-        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'windows-latest' }}
 
       - name: Package compiler
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
-        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/Linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/bflattened/runtime
+        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/bflattened/runtime
 
       - name: Archive compiler package
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
@@ -64,8 +64,8 @@ jobs:
       - name: ZIP native compiler (Linux)
         run: |
           mkdir artifacts/bflat-compiler-native
-          cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
-          cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
+          cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
+          cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
           zip -jr artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: ZIP native compiler (Windows)
@@ -92,7 +92,7 @@ jobs:
           mkdir artifacts/bflat-libs
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/lib/net8.0/*
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/native/*.Native.*a
-          cp -t artifacts/bflat-libs artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/aotsdk/*
+          cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/aotsdk/*
           zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: ZIP libs (Windows)
