@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: nuget
-          path: bflat/pack/bin/Debug/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg
+          path: bflat/pack/bin/Release/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg
 
       - name: ZIP native compiler (Linux)
         run: |
