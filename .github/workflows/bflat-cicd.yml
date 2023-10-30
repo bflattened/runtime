@@ -23,15 +23,18 @@ jobs:
             arch: arm64
             vm: ubuntu-latest
             crossrootfs: /crossrootfs/arm64
+            rid: linux-arm64
           - os: linux-glibc
             container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64
             arch: x64
             vm: ubuntu-latest
             crossrootfs: /crossrootfs/x64
+            rid: linux-x64
           - os: linux-bionic
             container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-android-amd64
             arch: arm64
             vm: ubuntu-latest
+            rid: linux-bionic-arm64
           - os: windows
             arch: x64
             vm: windows-latest
@@ -98,8 +101,8 @@ jobs:
       - name: ZIP libs (Linux)
         run: |
           mkdir artifacts/bflat-libs
-          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/lib/net8.0/*
-          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/native/*.Native.*a
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/lib/net8.0/*
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/native/*.Native.*a
           cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/aotsdk/*
           ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
         if: ${{ matrix.vm == 'ubuntu-latest' }}
