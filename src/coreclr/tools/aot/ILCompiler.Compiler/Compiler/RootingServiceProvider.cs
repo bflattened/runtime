@@ -30,7 +30,10 @@ namespace ILCompiler
             _rootAdder(methodEntryPoint, reason);
 
             if (exportName != null)
+            {
+                exportName = _factory.NameMangler.NodeMangler.ExternMethod(exportName, method);
                 _factory.NodeAliases.Add(methodEntryPoint, exportName);
+            }
 
             if (canonMethod != method && method.HasInstantiation)
                 _rootAdder(_factory.MethodGenericDictionary(method), reason);
