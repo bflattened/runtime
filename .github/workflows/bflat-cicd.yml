@@ -147,11 +147,11 @@ jobs:
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
 
       - name: Build tests (Linux)
-        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot'
+        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot/SmokeTests'
         if: ${{ matrix.vm == 'ubuntu-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
       - name: Build tests (Windows)
         shell: cmd
-        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot
+        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot\SmokeTests
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
 
       - name: Run tests (Linux)
