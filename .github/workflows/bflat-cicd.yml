@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [ bflat-main, bflat-release/7.0 ]
+    branches: [ bflat-main, bflat-release/7.0, bflat-release/8.0 ]
 
   workflow_dispatch:
     inputs:
@@ -19,14 +19,22 @@ jobs:
       matrix:
         include:
           - os: linux-glibc
-            container: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm64
             arch: arm64
             vm: ubuntu-latest
             crossrootfs: /crossrootfs/arm64
+            rid: linux-arm64
           - os: linux-glibc
-            container: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-20210714125435-9b5bbc2
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64
             arch: x64
             vm: ubuntu-latest
+            crossrootfs: /crossrootfs/x64
+            rid: linux-x64
+          - os: linux-bionic
+            container: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-android-amd64
+            arch: arm64
+            vm: ubuntu-latest
+            rid: linux-bionic-arm64
           - os: windows
             arch: x64
             vm: windows-latest
@@ -40,36 +48,36 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Build the product (Linux)
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs == '' }}
-      - name: Build the product (Linux cross)
         env:
           ROOTFS_DIR: ${{ matrix.crossrootfs }}
-        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
-        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.crossrootfs != '' }}
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} /p:CrossBuild=true -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
+      - name: Build the product (Linux Bionic)
+        run: ./build.sh clr.nativeaotlibs+clr.nativeaotruntime+libs.native+libs.sfx -c Release -os ${{ matrix.os }} -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os == 'linux-bionic' }}
       - name: Build the product (Windows)
         shell: cmd
-        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
+        run: build.cmd clr.nativeaotlibs+clr.nativeaotruntime+clr.alljits+clr.tools+libs.native+libs.sfx -c Release -arch ${{ matrix.arch }} -ci /p:OfficialBuildId="${{ github.event.inputs.buildid }}" /p:GenerateDocumentationFile=false
         if: ${{ matrix.vm == 'windows-latest' }}
 
       - name: Package compiler
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
-        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/Linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/bflattened/runtime
+        run: ./dotnet.sh pack bflat/pack/ILCompiler.Compiler.nuproj -p:Version=${{ github.event.inputs.version }} -p:IntermediateOutputPath=$GITHUB_WORKSPACE/artifacts/bin/coreclr/linux.x64.Release/ilc/ -p:RepositoryUrl=https://github.com/bflattened/runtime
 
       - name: Archive compiler package
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' && github.event.inputs.version != '' }}
         uses: actions/upload-artifact@v2
         with:
           name: nuget
-          path: bflat/pack/bin/Debug/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg
+          path: bflat/pack/bin/Release/BFlat.Compiler.${{ github.event.inputs.version }}.nupkg
 
       - name: ZIP native compiler (Linux)
         run: |
           mkdir artifacts/bflat-compiler-native
-          cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
-          cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
-          zip -jr artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
-        if: ${{ matrix.vm == 'ubuntu-latest' }}
+          cp -t artifacts/bflat-compiler-native artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libclrjit_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libjitinterface_* artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/ilc/libobjwriter*
+          cp -t artifacts/bflat-compiler-native THIRD-PARTY-NOTICES.TXT artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/build/WindowsAPIs.txt
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-compiler-native
+        if: ${{ matrix.vm == 'ubuntu-latest' && matrix.os != 'linux-bionic' }}
       - name: ZIP native compiler (Windows)
         run: |
           mkdir artifacts\bflat-compiler-native
@@ -88,14 +96,15 @@ jobs:
         with:
           name: native-compiler
           path: artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
+        if: ${{ matrix.os != 'linux-bionic' }}
 
       - name: ZIP libs (Linux)
         run: |
           mkdir artifacts/bflat-libs
-          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/lib/net8.0/*
-          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.linux-${{ matrix.arch }}/Release/runtimes/linux-${{ matrix.arch }}/native/*.Native.*a
-          cp -t artifacts/bflat-libs artifacts/bin/coreclr/Linux.${{ matrix.arch }}.Release/aotsdk/*
-          zip -jr artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/lib/net8.0/*
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/native/*.Native.*a
+          cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/aotsdk/*
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
         if: ${{ matrix.vm == 'ubuntu-latest' }}
       - name: ZIP libs (Windows)
         run: |
@@ -118,7 +127,7 @@ jobs:
         run: |
           mkdir artifacts/bflat-refs
           cp -t artifacts/bflat-refs artifacts/bin/microsoft.netcore.app.ref/ref/net8.0/*.dll
-          zip -jr artifacts/bflat-refs.zip artifacts/bflat-refs
+          ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-refs.zip artifacts/bflat-refs
 
       - name: Archive refs
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' }}
@@ -138,11 +147,11 @@ jobs:
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
 
       - name: Build tests (Linux)
-        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot'
+        run: ./src/tests/build.sh nativeaot release ${{ matrix.arch }} 'tree nativeaot/SmokeTests'
         if: ${{ matrix.vm == 'ubuntu-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
       - name: Build tests (Windows)
         shell: cmd
-        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot
+        run: src\tests\build.cmd nativeaot release ${{ matrix.arch }} tree nativeaot\SmokeTests
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
 
       - name: Run tests (Linux)
@@ -272,4 +281,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: libs/bflat-libs-linux-glibc-arm64.zip
           asset_name: bflat-libs-linux-glibc-arm64.zip
+          asset_content_type: application/zip
+
+      - name: Upload libs (linux-bionic-arm64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: libs/bflat-libs-linux-bionic-arm64.zip
+          asset_name: bflat-libs-linux-bionic-arm64.zip
           asset_content_type: application/zip
