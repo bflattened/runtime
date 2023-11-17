@@ -186,14 +186,6 @@ namespace SVR {
 #define STRESS_HEAP_ARG(x)
 #endif // STRESS_HEAP
 
-//dynamic data interface
-struct gc_counters
-{
-    size_t current_size;
-    size_t promoted_size;
-    size_t collection_count;
-};
-
 enum bgc_state
 {
     bgc_not_in_process = 0,
@@ -247,6 +239,49 @@ struct alloc_context : gc_alloc_context
     inline void set_home_heap(SVR::GCHeap* heap)
     {
         gc_reserved_2 = heap;
+    }
+
+    // How the alloc_count field is organized -
+    // 
+    // high 16-bits are for the handle info, out of which
+    // high 10 bits store the cpu index. 
+    // low 6 bits store the number of handles allocated so far (before the next reset).
+    // 
+    // low 16-bits are for the actual alloc_count used by balance_heaps
+    inline void init_alloc_count()
+    {
+        alloc_count &= 0xffff0000;
+    }
+
+    inline uint16_t get_alloc_count()
+    {
+        return (uint16_t)alloc_count;
+    }
+
+    inline void inc_alloc_count()
+    {
+        int high_16_bits = (uint32_t)alloc_count >> 16;
+        int low_16_bits = alloc_count & 0xffff;
+        // When we overflow we don't start from 0 because we would't want to go through the init logic again
+        // in balance_heaps.
+        low_16_bits = (low_16_bits == 0xffff) ? 16 : (low_16_bits + 1);
+
+        alloc_count = (high_16_bits << 16) | low_16_bits;
+    }
+
+    inline void init_handle_info()
+    {
+        // Start the handle table index based on the AC value to make it random. There may have been handles
+        // already allocated before this and that's fine.
+        int cpu_index = ((size_t)this >> 4) % g_num_processors;
+        int handle_info = cpu_index << 6;
+        alloc_count = handle_info << 16;
+    }
+
+    inline void set_handle_info (int handle_info)
+    {
+        int low_16_bits = alloc_count & 0xffff;
+        alloc_count = low_16_bits | (handle_info << 16);
     }
 #endif // FEATURE_SVR_GC
 };
