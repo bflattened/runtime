@@ -101,7 +101,7 @@ jobs:
       - name: ZIP libs (Linux)
         run: |
           mkdir artifacts/bflat-libs
-          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/lib/net8.0/*
+          cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/lib/net9.0/*
           cp -t artifacts/bflat-libs artifacts/bin/microsoft.netcore.app.runtime.${{ matrix.rid }}/Release/runtimes/${{ matrix.rid }}/native/*.Native.*a
           cp -t artifacts/bflat-libs artifacts/bin/coreclr/linux.${{ matrix.arch }}.Release/aotsdk/*
           ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip artifacts/bflat-libs
@@ -109,7 +109,7 @@ jobs:
       - name: ZIP libs (Windows)
         run: |
           mkdir artifacts\bflat-libs
-          copy artifacts\bin\microsoft.netcore.app.runtime.win-${{ matrix.arch }}\Release\runtimes\win-${{ matrix.arch }}\lib\net8.0\* artifacts\bflat-libs\
+          copy artifacts\bin\microsoft.netcore.app.runtime.win-${{ matrix.arch }}\Release\runtimes\win-${{ matrix.arch }}\lib\net9.0\* artifacts\bflat-libs\
           copy artifacts\bin\coreclr\Windows.${{ matrix.arch }}.Release\aotsdk\* artifacts\bflat-libs\
           pushd artifacts\bflat-libs\
           Compress-Archive * $Env:GITHUB_WORKSPACE\artifacts\bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
@@ -126,7 +126,7 @@ jobs:
         if: ${{ matrix.os == 'linux-glibc' && matrix.arch == 'x64' }}
         run: |
           mkdir artifacts/bflat-refs
-          cp -t artifacts/bflat-refs artifacts/bin/microsoft.netcore.app.ref/ref/net8.0/*.dll
+          cp -t artifacts/bflat-refs artifacts/bin/microsoft.netcore.app.ref/ref/net9.0/*.dll
           ./dotnet.sh run --project bflat/zip/zip.csproj -- artifacts/bflat-refs.zip artifacts/bflat-refs
 
       - name: Archive refs
