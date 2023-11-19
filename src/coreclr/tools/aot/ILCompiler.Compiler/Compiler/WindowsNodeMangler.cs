@@ -95,7 +95,7 @@ namespace ILCompiler
             else
             {
                 Debug.Assert(method is Internal.TypeSystem.Ecma.EcmaMethod ecmaMethod && ecmaMethod.GetRuntimeExportName() != null);
-                callConv = UnmanagedCallingConventions.Cdecl;
+                return unmangledName;
             }
 
             int signatureBytes = 0;
