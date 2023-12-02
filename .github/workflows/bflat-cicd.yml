@@ -161,9 +161,30 @@ jobs:
         shell: cmd
         run: src\tests\run.cmd runnativeaottests release ${{ matrix.arch }}
         if: ${{ matrix.vm == 'windows-latest' && github.event.inputs.version == '' && matrix.arch != 'arm64' }}
+
+  build_x86_windows:
+    runs-on: windows-latest
+    name: Build and test windows x86
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build the product (Windows)
+        shell: cmd
+        run: bldx86.cmd
+      - name: ZIP libs (Windows)
+        run: |
+          mkdir artifacts\bflat-libs
+          copy artifacts\bin\coreclr\Windows.x86.Release\aotsdk\* artifacts\bflat-libs\
+          pushd artifacts\bflat-libs\
+          Compress-Archive * $Env:GITHUB_WORKSPACE\artifacts\bflat-libs-windows-x86.zip
+          popd
+      - name: Archive libs
+        uses: actions/upload-artifact@v2
+        with:
+          name: libs
+          path: artifacts/bflat-libs-windows-x86.zip
           
   publish:
-    needs: build_and_test
+    needs: [ build_and_test, build_x86_windows ]
     runs-on: ubuntu-latest
     name: Publish release and NuGet
     if: ${{ github.event.inputs.version != '' && github.actor == 'MichalStrehovsky' }}
@@ -201,6 +222,16 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: refs/bflat-refs.zip
           asset_name: bflat-refs.zip
+          asset_content_type: application/zip
+
+      - name: Upload libs (windows-x86)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: libs/bflat-libs-windows-x86.zip
+          asset_name: bflat-libs-windows-x86.zip
           asset_content_type: application/zip
 
       - name: Upload native compiler (windows-x64)
