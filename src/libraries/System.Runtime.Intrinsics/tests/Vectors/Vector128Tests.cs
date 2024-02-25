@@ -4518,6 +4518,38 @@ namespace System.Runtime.Intrinsics.Tests.Vectors
         }
 
         [Fact]
+        public void Vector128SingleCreateFromArrayTest()
+        {
+            float[] array = [1.0f, 2.0f, 3.0f, 4.0f, 5.0f];
+            Vector128<float> vector = Vector128.Create(array);
+            Assert.Equal(Vector128.Create(1.0f, 2.0f, 3.0f, 4.0f), vector);
+        }
+
+        [Fact]
+        public void Vector128SingleCreateFromArrayOffsetTest()
+        {
+            float[] array = [1.0f, 2.0f, 3.0f, 4.0f, 5.0f];
+            Vector128<float> vector = Vector128.Create(array, 1);
+            Assert.Equal(Vector128.Create(2.0f, 3.0f, 4.0f, 5.0f), vector);
+        }
+
+        [Fact]
+        public void Vector128SingleCopyToTest()
+        {
+            float[] array = new float[4];
+            Vector128.Create(2.0f).CopyTo(array);
+            Assert.True(array.AsSpan().SequenceEqual([2.0f, 2.0f, 2.0f, 2.0f]));
+        }
+
+        [Fact]
+        public void Vector128SingleCopyToOffsetTest()
+        {
+            float[] array = new float[5];
+            Vector128.Create(2.0f).CopyTo(array, 1);
+            Assert.True(array.AsSpan().SequenceEqual([0.0f, 2.0f, 2.0f, 2.0f, 2.0f]));
+        }
+
+        [Fact]
         public void IsSupportedByte() => TestIsSupported<byte>();
 
         [Fact]
