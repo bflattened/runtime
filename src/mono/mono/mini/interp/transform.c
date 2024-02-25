@@ -788,28 +788,32 @@ fixup_newbb_stack_locals (TransformData *td, InterpBasicBlock *newbb)
 	}
 }
 
+static void
+merge_stack_type_information (StackInfo *state1, StackInfo *state2, int len)
+{
+	// Discard type information if we have type conflicts for stack contents
+	for (int i = 0; i < len; i++) {
+		if (state1 [i].klass != state2 [i].klass) {
+			state1 [i].klass = NULL;
+			state2 [i].klass = NULL;
+		}
+	}
+}
+
 // Initializes stack state at entry to bb, based on the current stack state
 static void
 init_bb_stack_state (TransformData *td, InterpBasicBlock *bb)
 {
-	// FIXME If already initialized, then we need to generate mov to the registers in the state.
 	// Check if already initialized
 	if (bb->stack_height >= 0) {
-		// Discard type information if we have type conflicts for stack contents
-		for (int i = 0; i < bb->stack_height; i++) {
-			if (bb->stack_state [i].klass != td->stack [i].klass) {
-				bb->stack_state [i].klass = NULL;
-				td->stack [i].klass = NULL;
-			}
+		merge_stack_type_information (td->stack, bb->stack_state, bb->stack_height);
+	} else {
+		bb->stack_height = GPTRDIFF_TO_INT (td->sp - td->stack);
+		if (bb->stack_height > 0) {
+			int size = bb->stack_height * sizeof (td->stack [0]);
+			bb->stack_state = (StackInfo*)mono_mempool_alloc (td->mempool, size);
+			memcpy (bb->stack_state, td->stack, size);
 		}
-		return;
-	}
-
-	bb->stack_height = GPTRDIFF_TO_INT (td->sp - td->stack);
-	if (bb->stack_height > 0) {
-		int size = bb->stack_height * sizeof (td->stack [0]);
-		bb->stack_state = (StackInfo*)mono_mempool_alloc (td->mempool, size);
-		memcpy (bb->stack_state, td->stack, size);
 	}
 }
 
@@ -4783,6 +4787,19 @@ is_ip_protected (MonoMethodHeader *header, int offset)
 }
 
 static gboolean
+should_insert_seq_point (TransformData *td)
+{
+	//following the CoreCLR's algorithm for adding the sequence points
+	if ((*td->ip == CEE_NOP) ||
+		(*td->ip == CEE_CALLVIRT) ||
+		(*td->ip == CEE_CALLI) ||
+		(*td->ip == CEE_CALL) ||
+		(GPTRDIFF_TO_INT (td->sp - td->stack) == 0))
+		return TRUE;
+	return FALSE;
+}
+
+static gboolean
 generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, MonoGenericContext *generic_context, MonoError *error)
 {
 	int mt, i32;
@@ -4813,6 +4830,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 	gboolean save_last_error = FALSE;
 	gboolean link_bblocks = TRUE;
 	gboolean inlining = td->method != method;
+	gboolean generate_enc_seq_points_without_debug_info = FALSE;
 	InterpBasicBlock *exit_bb = NULL;
 
 	original_bb = bb = mono_basic_block_split (method, error, header);
@@ -4859,6 +4877,8 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			int n_il_offsets;
 
 			mono_debug_get_seq_points (minfo, NULL, NULL, NULL, &sps, &n_il_offsets);
+			if (n_il_offsets == 0)
+				generate_enc_seq_points_without_debug_info = mono_debug_generate_enc_seq_points_without_debug_info (minfo);
 			// FIXME: Free
 			seq_point_locs = mono_bitset_mem_new (mono_mempool_alloc0 (td->mempool, mono_bitset_alloc_size (header->code_size, 0)), header->code_size, 0);
 			sym_seq_points = TRUE;
@@ -5010,8 +5030,12 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			td->cbb = new_bb;
 
 			if (new_bb->stack_height >= 0) {
-				if (new_bb->stack_height > 0)
+				if (new_bb->stack_height > 0) {
+					if (link_bblocks)
+						merge_stack_type_information (td->stack, new_bb->stack_state, new_bb->stack_height);
+					// This is relevant only for copying the vars associated with the values on the stack
 					memcpy (td->stack, new_bb->stack_state, new_bb->stack_height * sizeof(td->stack [0]));
+				}
 				td->sp = td->stack + new_bb->stack_height;
 			} else if (link_bblocks) {
 				/* This bblock is not branched to. Initialize its stack state */
@@ -5083,6 +5107,9 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_PROF_COVERAGE_STORE);
 			WRITE64_INS (td->last_ins, 0, &counter);
 		}
+
+		if (G_UNLIKELY (generate_enc_seq_points_without_debug_info) && should_insert_seq_point (td))
+			last_seq_point = interp_add_ins (td, MINT_SDB_SEQ_POINT);
 
 		switch (*td->ip) {
 		case CEE_NOP:
@@ -5353,7 +5380,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			if (!interp_transform_call (td, method, NULL, generic_context, constrained_class, readonly, error, TRUE, save_last_error, tailcall))
 				goto exit;
 
-			if (need_seq_point) {
+			if (need_seq_point && !generate_enc_seq_points_without_debug_info) {
 				// check if it is a nested call and remove the MONO_INST_NONEMPTY_STACK of the last breakpoint, only for non native methods
 				if (!(method->flags & METHOD_IMPL_ATTRIBUTE_NATIVE)) {
 					if (emitted_funccall_seq_point)	{
@@ -7550,6 +7577,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					interp_ins_set_sreg (td->last_ins, td->sp [0].local);
 					td->sp = td->stack;
 					++td->ip;
+					link_bblocks = FALSE;
 					break;
 
 				case CEE_MONO_LD_DELEGATE_METHOD_PTR:
@@ -7990,7 +8018,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 				} else {
 					int loc_n = arg_locals [n];
 					interp_add_ins (td, MINT_LDLOCA_S);
-					interp_ins_set_sreg (td->last_ins, n);
+					interp_ins_set_sreg (td->last_ins, loc_n);
 					td->locals [loc_n].indirects++;
 				}
 				push_simple_type (td, STACK_TYPE_MP);

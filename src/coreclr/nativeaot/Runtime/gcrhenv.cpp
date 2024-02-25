@@ -754,7 +754,7 @@ void GCToEEInterface::DiagGCEnd(size_t index, int gen, int reason, bool fConcurr
     {
         ETW::GCLog::WalkHeap();
     }
-#endif
+#endif // FEATURE_EVENT_TRACE
 }
 
 // Note on last parameter: when calling this for bgc, only ETW
