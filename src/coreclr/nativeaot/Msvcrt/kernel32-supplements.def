@@ -1,3 +1,0 @@
-LIBRARY kernel32
-EXPORTS
-        __chkstk

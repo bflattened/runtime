@@ -7,17 +7,6 @@ else()
 endif()
 
 add_custom_command(
-  OUTPUT kernel32-supplements.lib
-  COMMAND lib.exe /machine:${LIB_MACHINE_FLAG} /def:${CMAKE_CURRENT_SOURCE_DIR}/kernel32-supplements.def /out:kernel32-supplements.lib
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/kernel32-supplements.def
-  VERBATIM)
-add_custom_target(kernel32supplementslib ALL
-    DEPENDS kernel32-supplements.lib
-    VERBATIM)
-add_dependencies(nativeaot kernel32supplementslib)
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/kernel32-supplements.lib DESTINATION aotsdk COMPONENT nativeaot)
-
-add_custom_command(
   OUTPUT api-ms-win-crt-conio-l1-1-0.lib
   COMMAND lib.exe /machine:${LIB_MACHINE_FLAG} /def:${CMAKE_CURRENT_SOURCE_DIR}/api-ms-win-crt-conio-l1-1-0.def /out:api-ms-win-crt-conio-l1-1-0.lib
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/api-ms-win-crt-conio-l1-1-0.def
