@@ -23,7 +23,7 @@ if(MSVC)
     string(REPLACE "/RTC1" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
   endif()
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/GS->)
-  add_compile_options(/Gs10000000) # avoid __chkstk
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Gs10000000) # avoid __chkstk
 
   # Sets the options that create the fastest code in the majority of cases
   add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:/O2>)
