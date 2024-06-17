@@ -144,6 +144,7 @@ else ()
         if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/RTC1")
           string(REPLACE "/RTC1" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
         endif()
+        add_compile_options(/Gs10000000)  # avoid __chkstk
         add_compile_options(/EHa-)
         add_compile_options(/GS-)
         add_compile_options(/Zl)

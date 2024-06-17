@@ -95,7 +95,6 @@ The .NET Foundation licenses this file to you under the MIT license.
       <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-utility-l1-1-0.lib" />
       <LinkerArg Include="$(IlcSdkPath)api-ms-win-crt-math-l1-1-0.lib" />
       <LinkerArg Include="$(IlcSdkPath)shcrt.lib" />
-      <LinkerArg Include="$(IlcSdkPath)kernel32-supplements.lib" />
       <LinkerArg Include="/nodefaultlib:libcpmt.lib" />
       <LinkerArg Include="shell32.lib" />
     </ItemGroup>
