@@ -5,6 +5,7 @@
 #define __XPLAT_H__
 
 #include <platformdefines.h>
+#include <minipal/guid.h>
 
 #ifndef WINDOWS
 
@@ -43,36 +44,12 @@ typedef struct HSTRING__{
 // Declare the HSTRING handle for C/C++
 typedef HSTRING__* HSTRING;
 
-typedef unsigned __int64 UINT64, *PUINT64;
-
-#ifndef GUID_DEFINED
-typedef struct _GUID {
-    ULONG           Data1;    // NOTE: diff from Win32, for LP64
-    unsigned short  Data2;
-    unsigned short  Data3;
-    unsigned char   Data4[8];
-} GUID;
 typedef const GUID *LPCGUID;
-#define GUID_DEFINED
-#endif // !GUID_DEFINED
-
 #define REFGUID const GUID &
-
-extern "C++" {
-#if !defined _SYS_GUID_OPERATOR_EQ_ && !defined _NO_SYS_GUID_OPERATOR_EQ_
-#define _SYS_GUID_OPERATOR_EQ_
-inline int IsEqualGUID(REFGUID rguid1, REFGUID rguid2)
-    { return !memcmp(&rguid1, &rguid2, sizeof(GUID)); }
-inline int operator==(REFGUID guidOne, REFGUID guidOther)
-    { return IsEqualGUID(guidOne,guidOther); }
-inline int operator!=(REFGUID guidOne, REFGUID guidOther)
-    { return !IsEqualGUID(guidOne,guidOther); }
-#endif
-};
 
 typedef GUID IID;
 #define REFIID const IID &
-#define IsEqualIID(riid1, riid2) IsEqualGUID(riid1, riid2)
+#define IsEqualIID(riid1, riid2) riid1 == riid2
 
 #define __uuidof(type)      IID_##type
 
@@ -84,31 +61,23 @@ typedef GUID IID;
 typedef ptrdiff_t INT_PTR;
 typedef size_t UINT_PTR;
 
-typedef unsigned long long ULONG64;
-typedef long long LONG64;
 typedef double DOUBLE;
 typedef float FLOAT;
-typedef int INT, *LPINT;
-typedef unsigned int UINT;
-typedef char CHAR, *PCHAR;
-typedef unsigned short USHORT;
-typedef signed short SHORT;
-typedef unsigned short WORD, *PWORD, *LPWORD;
-typedef int LONG;
+typedef char CHAR;
 
 typedef size_t SIZE_T;
 
 typedef union tagCY {
     struct {
 #if BIGENDIAN
-        LONG    Hi;
-        LONG   Lo;
+        int32_t Hi;
+        int32_t Lo;
 #else
-        LONG   Lo;
-        LONG    Hi;
+        int32_t Lo;
+        int32_t Hi;
 #endif
     };
-    LONG64 int64;
+    int64_t int64;
 } CY, *LPCY;
 
 typedef CY CURRENCY;
@@ -121,29 +90,29 @@ typedef struct tagDEC {
 #if BIGENDIAN
     union {
         struct {
-            BYTE sign;
-            BYTE scale;
+            uint8_t sign;
+            uint8_t scale;
         };
-        USHORT signscale;
+        uint16_t signscale;
     };
-    USHORT wReserved;
+    uint16_t wReserved;
 #else
-    USHORT wReserved;
+    uint16_t wReserved;
     union {
         struct {
-            BYTE scale;
-            BYTE sign;
+            uint8_t scale;
+            uint8_t sign;
         };
-        USHORT signscale;
+        uint16_t signscale;
     };
 #endif
-    LONG Hi32;
+    int32_t Hi32;
     union {
         struct {
-            LONG Lo32;
-            LONG Mid32;
+            int32_t Lo32;
+            int32_t Mid32;
         };
-        ULONG64 Lo64;
+        uint64_t Lo64;
     };
 } DECIMAL, *LPDECIMAL;
 
@@ -156,7 +125,7 @@ typedef struct tagDEC {
 #define FALSE 0
 #endif
 
-typedef USHORT VARIANT_BOOL;
+typedef uint16_t VARIANT_BOOL;
 
 #ifndef VARIANT_TRUE
 #define VARIANT_TRUE -1
@@ -179,9 +148,9 @@ IUnknown
         REFIID riid,
         void **ppvObject) = 0;
 
-    virtual ULONG STDMETHODCALLTYPE AddRef(void) = 0;
+    virtual uint32_t STDMETHODCALLTYPE AddRef(void) = 0;
 
-    virtual ULONG STDMETHODCALLTYPE Release(void) = 0;
+    virtual uint32_t STDMETHODCALLTYPE Release(void) = 0;
 };
 
 #endif // __IUnknown_INTERFACE_DEFINED__
@@ -202,7 +171,7 @@ IInspectable : public IUnknown
 {
 public:
     virtual HRESULT STDMETHODCALLTYPE GetIids(
-        /* [out] */ ULONG * iidCount,
+        /* [out] */ uint32_t * iidCount,
         /* [size_is][size_is][out] */ IID * *iids) = 0;
 
     virtual HRESULT STDMETHODCALLTYPE GetRuntimeClassName(
@@ -235,7 +204,7 @@ public:
         /* [retval][out] */ IWeakReference * *weakReference) = 0;
 };
 
-#define DECIMAL_NEG ((BYTE)0x80)
+#define DECIMAL_NEG ((uint8_t)0x80)
 #define DECIMAL_SCALE(dec)       ((dec).u.u.scale)
 #define DECIMAL_SIGN(dec)        ((dec).u.u.sign)
 #define DECIMAL_SIGNSCALE(dec)   ((dec).u.signscale)

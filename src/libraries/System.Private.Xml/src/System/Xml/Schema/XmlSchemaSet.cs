@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics;
 using System.Collections;
-using System.Threading;
 using System.Collections.Generic;
-using System.Runtime.Versioning;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Versioning;
+using System.Threading;
 
 namespace System.Xml.Schema
 {
@@ -56,20 +56,8 @@ namespace System.Xml.Schema
         private XmlSchemaObjectTable? _typeExtensions;
 
         //Thread safety
-        private object? _internalSyncObject;
-        internal object InternalSyncObject
-        {
-            get
-            {
-                if (_internalSyncObject == null)
-                {
-                    object o = new object();
-                    Interlocked.CompareExchange<object?>(ref _internalSyncObject, o, null);
-                }
-
-                return _internalSyncObject;
-            }
-        }
+        internal object InternalSyncObject =>
+            field ?? Interlocked.CompareExchange(ref field, new object(), null) ?? field;
 
         //Constructors
 

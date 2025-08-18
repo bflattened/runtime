@@ -209,7 +209,7 @@ namespace System.Net.Primitives.Functional.Tests
             Assert.True(IPAddress.IsLoopback(ip));
 
             ip = new IPAddress(IPAddress.Loopback.MapToIPv6().GetAddressBytes()); // IPv4 loopback mapped to IPv6
-            Assert.Equal(!PlatformDetection.IsNetFramework, IPAddress.IsLoopback(ip)); // https://github.com/dotnet/runtime/issues/28740
+            Assert.True(IPAddress.IsLoopback(ip)); // https://github.com/dotnet/runtime/issues/28740
         }
 
         [Fact]
@@ -346,6 +346,10 @@ namespace System.Net.Primitives.Functional.Tests
             Assert.Throws<SocketException>(() => IPAddress.Broadcast.Address = MaxAddress - 1);
             Assert.Throws<SocketException>(() => IPAddress.Loopback.Address = MaxAddress - 1);
             Assert.Throws<SocketException>(() => IPAddress.None.Address = MaxAddress - 1);
+
+            Assert.Throws<SocketException>(() => IPAddress.IPv6Any.ScopeId = 1);
+            Assert.Throws<SocketException>(() => IPAddress.IPv6Loopback.ScopeId = 1);
+            Assert.Throws<SocketException>(() => IPAddress.IPv6None.ScopeId = 1);
         }
 #pragma warning restore 618
     }

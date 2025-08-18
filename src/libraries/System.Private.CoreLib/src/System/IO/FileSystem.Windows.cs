@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Win32.SafeHandles;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace System.IO
 {
@@ -464,32 +464,26 @@ namespace System.IO
         private static void SetFileTime(
             string fullPath,
             bool asDirectory,
-            long creationTime = -1,
-            long lastAccessTime = -1,
-            long lastWriteTime = -1,
-            long changeTime = -1,
-            uint fileAttributes = 0)
+            long creationTime = 0,
+            long lastAccessTime = 0,
+            long lastWriteTime = 0)
         {
             using SafeFileHandle handle = OpenHandleToWriteAttributes(fullPath, asDirectory);
-            SetFileTime(handle, fullPath, creationTime, lastAccessTime, lastWriteTime, changeTime, fileAttributes);
+            SetFileTime(handle, fullPath, creationTime, lastAccessTime, lastWriteTime);
         }
 
         private static unsafe void SetFileTime(
             SafeFileHandle fileHandle,
             string? fullPath = null,
-            long creationTime = -1,
-            long lastAccessTime = -1,
-            long lastWriteTime = -1,
-            long changeTime = -1,
-            uint fileAttributes = 0)
+            long creationTime = 0,
+            long lastAccessTime = 0,
+            long lastWriteTime = 0)
         {
             var basicInfo = new Interop.Kernel32.FILE_BASIC_INFO
             {
                 CreationTime = creationTime,
                 LastAccessTime = lastAccessTime,
                 LastWriteTime = lastWriteTime,
-                ChangeTime = changeTime,
-                FileAttributes = fileAttributes
             };
 
             if (!Interop.Kernel32.SetFileInformationByHandle(fileHandle, Interop.Kernel32.FileBasicInfo, &basicInfo, (uint)sizeof(Interop.Kernel32.FILE_BASIC_INFO)))

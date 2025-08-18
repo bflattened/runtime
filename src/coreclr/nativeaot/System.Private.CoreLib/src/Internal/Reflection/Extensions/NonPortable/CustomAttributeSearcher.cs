@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Reflection;
-using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
 
 //==================================================================================================================
 // Dependency note:
@@ -108,18 +108,8 @@ namespace Internal.Reflection.Extensions.NonPortable
         //
         // Main iterator.
         //
-        private IEnumerable<CustomAttributeData> GetMatchingCustomAttributesIterator(E element, Func<Type, bool> rawPassesFilter, bool inherit)
+        private IEnumerable<CustomAttributeData> GetMatchingCustomAttributesIterator(E element, Func<Type, bool> passesFilter, bool inherit)
         {
-            Func<Type, bool> passesFilter =
-                delegate (Type attributeType)
-                {
-                    // Windows prohibits instantiating WinRT custom attributes. Filter them from the search as the desktop CLR does.
-                    TypeAttributes typeAttributes = attributeType.Attributes;
-                    if (0 != (typeAttributes & TypeAttributes.WindowsRuntime))
-                        return false;
-                    return rawPassesFilter(attributeType);
-                };
-
             LowLevelList<CustomAttributeData> immediateResults = new LowLevelList<CustomAttributeData>();
             foreach (CustomAttributeData cad in GetDeclaredCustomAttributes(element))
             {

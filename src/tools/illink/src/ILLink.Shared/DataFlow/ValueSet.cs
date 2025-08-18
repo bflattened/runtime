@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -12,246 +13,318 @@ using System.Text;
 
 namespace ILLink.Shared.DataFlow
 {
-	public readonly struct ValueSet<TValue> : IEquatable<ValueSet<TValue>>, IEnumerable<TValue>, IDeepCopyValue<ValueSet<TValue>>
-		where TValue : notnull
-	{
-		const int MaxValuesInSet = 256;
+    public readonly struct ValueSet<TValue> : IEquatable<ValueSet<TValue>>, IDeepCopyValue<ValueSet<TValue>>
+        where TValue : notnull
+    {
+        private const int MaxValuesInSet = 256;
 
-		public static ValueSet<TValue> Empty;
+        public static readonly ValueSet<TValue> Empty;
 
-		// Since we're going to do lot of type checks for this class a lot, it is much more efficient
-		// if the class is sealed (as then the runtime can do a simple method table pointer comparison)
-		private sealed class EnumerableValues : HashSet<TValue>
-		{
-			public EnumerableValues (IEnumerable<TValue> values) : base (values) { }
+        private sealed class ValueSetSentinel
+        {
+        }
 
-			public override int GetHashCode ()
-			{
-				int hashCode = 0;
-				foreach (var item in this)
-					hashCode = HashUtils.Combine (hashCode, item);
-				return hashCode;
-			}
+        private static readonly ValueSetSentinel UnknownSentinel = new();
 
-			public bool Equals (EnumerableValues other)
-			{
-				// Unfortunately if some of the values are ArrayValues then they can mutate
-				// after being added to the set, in which case their "hashing" is broken
-				// The set will self-heal on every Meet since we recreate the HashSet
-				// but equality is not guaranteed in the interim state.
-				// So to workaround this for now, iterate over both sets and check
-				// that the item can be found in the other set.
-				foreach (TValue item in this)
-					if (!other.Contains (item))
-						return false;
+        public static readonly ValueSet<TValue> Unknown = new(UnknownSentinel);
 
-				foreach (TValue item in other)
-					if (!Contains (item))
-						return false;
+        // Since we're going to do lot of type checks for this class a lot, it is much more efficient
+        // if the class is sealed (as then the runtime can do a simple method table pointer comparison)
+        private sealed class EnumerableValues : HashSet<TValue>
+        {
+            public EnumerableValues(IEnumerable<TValue> values) : base(values) { }
 
-				return true;
-			}
+            public override int GetHashCode()
+            {
+                int hashCode = 0;
+                foreach (var item in this)
+                    hashCode = HashUtils.Combine(hashCode, item);
+                return hashCode;
+            }
 
-			public bool Equals (TValue other)
-			{
-				// As described above, it's possible to end up with a hashset which has multiple
-				// values which are equal (due to mutability). So we can't rely on item count.
-				bool found = false;
-				foreach (TValue item in this) {
-					if (!item.Equals (other))
-						return false;
-					found = true;
-				}
+            public bool Equals(EnumerableValues other)
+            {
+                // Unfortunately if some of the values are ArrayValues then they can mutate
+                // after being added to the set, in which case their "hashing" is broken
+                // The set will self-heal on every Meet since we recreate the HashSet
+                // but equality is not guaranteed in the interim state.
+                // So to workaround this for now, iterate over both sets and check
+                // that the item can be found in the other set.
+                foreach (TValue item in this)
+                    if (!other.Contains(item))
+                        return false;
 
-				return found;
-			}
-		}
+                foreach (TValue item in other)
+                    if (!Contains(item))
+                        return false;
 
-		public struct Enumerator : IEnumerator<TValue>, IDisposable, IEnumerator
-		{
-			private readonly object? _value;
-			private int _state;  // 0 before beginning, 1 at item, 2 after end
-			private readonly IEnumerator<TValue>? _enumerator;
+                return true;
+            }
 
-			internal Enumerator (object? values)
-			{
-				_state = 0;
-				if (values is EnumerableValues valuesSet) {
-					_enumerator = valuesSet.GetEnumerator ();
-					_value = null;
-				} else {
-					_enumerator = null;
-					_value = values;
-				}
-			}
+            public bool Equals(TValue other)
+            {
+                // As described above, it's possible to end up with a hashset which has multiple
+                // values which are equal (due to mutability). So we can't rely on item count.
+                bool found = false;
+                foreach (TValue item in this)
+                {
+                    if (!item.Equals(other))
+                        return false;
+                    found = true;
+                }
 
-			public TValue Current => _enumerator is not null
-				? _enumerator.Current
-				: (_state == 1 ? (TValue) _value! : default!);
+                return found;
+            }
+        }
 
-			object? IEnumerator.Current => Current;
+        public struct Enumerator : IEnumerator<TValue>, IDisposable, IEnumerator
+        {
+            private readonly object? _value;
+            private int _state;  // 0 before beginning, 1 at item, 2 after end
+            private readonly IEnumerator<TValue>? _enumerator;
 
-			public void Dispose ()
-			{
-			}
+            internal Enumerator(object? values)
+            {
+                _state = 0;
+                if (values is EnumerableValues valuesSet)
+                {
+                    _enumerator = valuesSet.GetEnumerator();
+                    _value = null;
+                }
+                else
+                {
+                    _enumerator = null;
+                    _value = values;
+                }
+            }
 
-			public bool MoveNext ()
-			{
-				if (_enumerator is not null)
-					return _enumerator.MoveNext ();
+            public TValue Current => _enumerator is not null
+                ? _enumerator.Current
+                : (_state == 1 ? (TValue)_value! : default!);
 
-				if (_value is null)
-					return false;
+            object? IEnumerator.Current => Current;
 
-				if (_state > 1)
-					return false;
+            public void Dispose()
+            {
+            }
 
-				_state++;
-				return _state == 1;
-			}
+            public bool MoveNext()
+            {
+                if (_enumerator is not null)
+                    return _enumerator.MoveNext();
 
-			public void Reset ()
-			{
-				if (_enumerator is not null)
-					_enumerator.Reset ();
-				else
-					_state = 0;
-			}
-		}
+                if (_value is null)
+                    return false;
 
-		// This stores the values. By far the most common case will be either no values, or a single value.
-		// Cases where there are multiple values stored are relatively very rare.
-		//   null - no values (empty set)
-		//   TValue - single value itself
-		//   EnumerableValues typed object - multiple values, stored in the hashset
-		private readonly object? _values;
+                if (_state > 1)
+                    return false;
 
-		public ValueSet (TValue value) => _values = value;
+                _state++;
+                return _state == 1;
+            }
 
-		public ValueSet (IEnumerable<TValue> values) => _values = new EnumerableValues (values);
+            public void Reset()
+            {
+                if (_enumerator is not null)
+                    _enumerator.Reset();
+                else
+                    _state = 0;
+            }
+        }
 
-		private ValueSet (EnumerableValues values) => _values = values;
+        public readonly struct Enumerable : IEnumerable<TValue>
+        {
+            private readonly object? _values;
 
-		public static implicit operator ValueSet<TValue> (TValue value) => new (value);
+            public Enumerable(object? values) => _values = values;
 
-		public bool HasMultipleValues => _values is EnumerableValues;
+            public Enumerator GetEnumerator() => new(_values);
 
-		public override bool Equals (object? obj) => obj is ValueSet<TValue> other && Equals (other);
+            IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator() => GetEnumerator();
 
-		public bool Equals (ValueSet<TValue> other)
-		{
-			if (_values == null)
-				return other._values == null;
-			if (other._values == null)
-				return false;
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
 
-			if (_values is EnumerableValues enumerableValues) {
-				if (other._values is EnumerableValues otherValuesSet) {
-					return enumerableValues.Equals (otherValuesSet);
-				} else
-					return enumerableValues.Equals ((TValue) other._values);
-			} else {
-				if (other._values is EnumerableValues otherEnumerableValues) {
-					return otherEnumerableValues.Equals ((TValue) _values);
-				}
+        // This stores the values. By far the most common case will be either no values, or a single value.
+        // Cases where there are multiple values stored are relatively very rare.
+        //   null - no values (empty set)
+        //   TValue - single value itself
+        //   EnumerableValues typed object - multiple values, stored in the hashset
+        //   ValueSetSentinel.Unknown - unknown value, or "any possible value"
+        private readonly object? _values;
 
-				return EqualityComparer<TValue>.Default.Equals ((TValue) _values, (TValue) other._values);
-			}
-		}
+        public ValueSet(TValue value) => _values = value;
 
-		public static bool operator == (ValueSet<TValue> left, ValueSet<TValue> right) => left.Equals (right);
-		public static bool operator != (ValueSet<TValue> left, ValueSet<TValue> right) => !(left == right);
+        public ValueSet(IEnumerable<TValue> values) => _values = new EnumerableValues(values);
 
-		public override int GetHashCode ()
-		{
-			if (_values == null)
-				return typeof (ValueSet<TValue>).GetHashCode ();
+        private ValueSet(EnumerableValues values) => _values = values;
 
-			if (_values is EnumerableValues enumerableValues)
-				return enumerableValues.GetHashCode ();
+        private ValueSet(ValueSetSentinel sentinel) => _values = sentinel;
 
-			return _values.GetHashCode ();
-		}
+        public static implicit operator ValueSet<TValue>(TValue value) => new(value);
 
-		public Enumerator GetEnumerator () => new (_values);
+        // Note: returns false for Unknown
+        public bool HasMultipleValues => _values is EnumerableValues;
 
-		IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator () => GetEnumerator ();
+        public override bool Equals(object? obj) => obj is ValueSet<TValue> other && Equals(other);
 
-		IEnumerator IEnumerable.GetEnumerator () => GetEnumerator ();
+        public bool Equals(ValueSet<TValue> other)
+        {
+            if (_values == null)
+                return other._values == null;
+            if (other._values == null)
+                return false;
 
-		public bool Contains (TValue value) => _values is null
-			? false
-			: _values is EnumerableValues valuesSet
-				? valuesSet.Contains (value)
-				: EqualityComparer<TValue>.Default.Equals (value, (TValue) _values);
+            if (_values is EnumerableValues enumerableValues)
+            {
+                if (other._values is EnumerableValues otherValuesSet)
+                {
+                    return enumerableValues.Equals(otherValuesSet);
+                }
+                else if (other._values is TValue otherValue)
+                {
+                    return enumerableValues.Equals(otherValue);
+                }
+                else
+                {
+                    Debug.Assert(other._values == UnknownSentinel);
+                    return false;
+                }
+            }
+            else if (_values is TValue value)
+            {
+                if (other._values is EnumerableValues otherEnumerableValues)
+                {
+                    return otherEnumerableValues.Equals(value);
+                }
+                else if (other._values is TValue otherValue)
+                {
+                    return EqualityComparer<TValue>.Default.Equals(value, otherValue);
+                }
+                else
+                {
+                    Debug.Assert(other._values == UnknownSentinel);
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.Assert(_values == UnknownSentinel);
+                return other._values == UnknownSentinel;
+            }
+        }
 
-		internal static ValueSet<TValue> Union (ValueSet<TValue> left, ValueSet<TValue> right)
-		{
-			if (left._values == null)
-				return right.DeepCopy ();
-			if (right._values == null)
-				return left.DeepCopy ();
+        public static bool operator ==(ValueSet<TValue> left, ValueSet<TValue> right) => left.Equals(right);
+        public static bool operator !=(ValueSet<TValue> left, ValueSet<TValue> right) => !(left == right);
 
-			if (left._values is not EnumerableValues && right.Contains ((TValue) left._values))
-				return right.DeepCopy ();
+        public override int GetHashCode()
+        {
+            if (_values == null)
+                return typeof(ValueSet<TValue>).GetHashCode();
 
-			if (right._values is not EnumerableValues && left.Contains ((TValue) right._values))
-				return left.DeepCopy ();
+            if (_values is EnumerableValues enumerableValues)
+                return enumerableValues.GetHashCode();
 
-			var values = new EnumerableValues (left.DeepCopy ());
-			values.UnionWith (right.DeepCopy ());
-			// Limit the number of values we track, to prevent hangs in case of patterns that
-			// create exponentially many possible values. This will result in analysis holes.
-			if (values.Count > MaxValuesInSet)
-				return default;
-			return new ValueSet<TValue> (values);
-		}
+            return _values.GetHashCode();
+        }
 
-		internal static ValueSet<TValue> Intersection (ValueSet<TValue> left, ValueSet<TValue> right)
-		{
-			if (left._values == null)
-				return Empty;
-			if (right._values == null)
-				return Empty;
+        public Enumerable GetKnownValues() => new Enumerable(_values == UnknownSentinel ? null : _values);
 
-			if (left._values is not EnumerableValues)
-				return right.Contains ((TValue) left._values) ? left.DeepCopy () : Empty;
+        // Note: returns false for Unknown
+        public bool Contains(TValue value)
+        {
+            if (_values is null)
+                return false;
+            if (_values is EnumerableValues valuesSet)
+                return valuesSet.Contains(value);
+            if (_values is TValue thisValue)
+                return EqualityComparer<TValue>.Default.Equals(value, thisValue);
+            Debug.Assert(_values == UnknownSentinel);
+            return false;
+        }
 
-			if (right._values is not EnumerableValues)
-				return left.Contains ((TValue) right._values) ? right.DeepCopy () : Empty;
+        internal static ValueSet<TValue> Union(ValueSet<TValue> left, ValueSet<TValue> right)
+        {
+            if (left._values == null)
+                return right.DeepCopy();
+            if (right._values == null)
+                return left.DeepCopy();
 
-			var values = new EnumerableValues (left.DeepCopy ());
-			values.IntersectWith (right);
-			return new ValueSet<TValue> (values);
-		}
+            if (left._values == UnknownSentinel || right._values == UnknownSentinel)
+                return Unknown;
 
-		public bool IsEmpty () => _values == null;
+            if (left._values is not EnumerableValues && right.Contains((TValue)left._values))
+                return right.DeepCopy();
 
-		public override string ToString ()
-		{
-			StringBuilder sb = new ();
-			sb.Append ('{');
-			sb.Append (string.Join (",", this.Select (v => v.ToString ())));
-			sb.Append ('}');
-			return sb.ToString ();
-		}
+            if (right._values is not EnumerableValues && left.Contains((TValue)right._values))
+                return left.DeepCopy();
 
-		// Meet should copy the values, but most SingleValues are immutable.
-		// Clone returns `this` if there are no mutable SingleValues (SingleValues that implement IDeepCopyValue), otherwise creates a new ValueSet with copies of the copiable Values
-		public ValueSet<TValue> DeepCopy ()
-		{
-			if (_values is null)
-				return this;
+            var values = new EnumerableValues(left.DeepCopy().GetKnownValues());
+            values.UnionWith(right.DeepCopy().GetKnownValues());
+            // Limit the number of values we track, to prevent hangs in case of patterns that
+            // create exponentially many possible values.
+            if (values.Count > MaxValuesInSet)
+                return Unknown;
+            return new ValueSet<TValue>(values);
+        }
 
-			// Optimize for the most common case with only a single value
-			if (_values is not EnumerableValues) {
-				if (_values is IDeepCopyValue<TValue> copyValue)
-					return new ValueSet<TValue> (copyValue.DeepCopy ());
-				else
-					return this;
-			}
+        internal static ValueSet<TValue> Intersection(ValueSet<TValue> left, ValueSet<TValue> right)
+        {
+            if (left._values == null || right._values == null)
+                return Empty;
 
-			return new ValueSet<TValue> (this.Select (value => value is IDeepCopyValue<TValue> copyValue ? copyValue.DeepCopy () : value));
-		}
-	}
+            if (left._values == UnknownSentinel)
+                return right.DeepCopy();
+
+            if (right._values == UnknownSentinel)
+                return left.DeepCopy();
+
+            if (left._values is not EnumerableValues)
+                return right.Contains((TValue)left._values) ? left.DeepCopy() : Empty;
+
+            if (right._values is not EnumerableValues)
+                return left.Contains((TValue)right._values) ? right.DeepCopy() : Empty;
+
+            var values = new EnumerableValues(left.DeepCopy().GetKnownValues());
+            values.IntersectWith(right.GetKnownValues());
+            return new ValueSet<TValue>(values);
+        }
+
+        public bool IsEmpty() => _values == null;
+
+        public bool IsUnknown() => _values == UnknownSentinel;
+
+        public override string ToString()
+        {
+            if (IsUnknown())
+                return "Unknown";
+            StringBuilder sb = new();
+            sb.Append('{');
+            sb.Append(string.Join(",", GetKnownValues().Select(v => v.ToString())));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        // Meet should copy the values, but most SingleValues are immutable.
+        // Clone returns `this` if there are no mutable SingleValues (SingleValues that implement IDeepCopyValue), otherwise creates a new ValueSet with copies of the copiable Values
+        public ValueSet<TValue> DeepCopy()
+        {
+            if (_values is null)
+                return this;
+
+            if (_values == UnknownSentinel)
+                return this;
+
+            // Optimize for the most common case with only a single value
+            if (_values is not EnumerableValues)
+            {
+                if (_values is IDeepCopyValue<TValue> copyValue)
+                    return new ValueSet<TValue>(copyValue.DeepCopy());
+                else
+                    return this;
+            }
+
+            return new ValueSet<TValue>(GetKnownValues().Select(value => value is IDeepCopyValue<TValue> copyValue ? copyValue.DeepCopy() : value));
+        }
+    }
 }

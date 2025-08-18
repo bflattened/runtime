@@ -6,13 +6,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
+using System.Runtime.Versioning;
+using System.Security;
 using System.Text;
 using System.Xml.Schema;
 using System.Xml.XPath;
-using System.Security;
-using System.Globalization;
-using System.Runtime.Versioning;
 
 namespace System.Xml
 {
@@ -74,7 +74,6 @@ namespace System.Xml
         private readonly XmlImplementation _implementation;
         private readonly DomNameTable _domNameTable; // hash table of XmlName
         private XmlLinkedNode? _lastChild;
-        private XmlNamedNodeMap? _entities;
         private Hashtable? _htElementIdMap;
         private Hashtable? _htElementIDAttrDecl; //key: id; object: the ArrayList of the elements that have the same id (connected or disconnected)
         private SchemaInfo? _schemaInfo;
@@ -125,10 +124,10 @@ namespace System.Xml
 
         private XmlAttribute? _namespaceXml;
 
-        internal static EmptyEnumerator EmptyEnumerator = new EmptyEnumerator();
-        internal static IXmlSchemaInfo NotKnownSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.NotKnown);
-        internal static IXmlSchemaInfo ValidSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.Valid);
-        internal static IXmlSchemaInfo InvalidSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.Invalid);
+        internal static readonly EmptyEnumerator EmptyEnumerator = new EmptyEnumerator();
+        internal static readonly IXmlSchemaInfo NotKnownSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.NotKnown);
+        internal static readonly IXmlSchemaInfo ValidSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.Valid);
+        internal static readonly IXmlSchemaInfo InvalidSchemaInfo = new XmlSchemaInfo(XmlSchemaValidity.Invalid);
 
         // Initializes a new instance of the XmlDocument class.
         public XmlDocument() : this(new XmlImplementation())
@@ -1090,8 +1089,8 @@ namespace System.Xml
 
         internal XmlNamedNodeMap Entities
         {
-            get => _entities ??= new XmlNamedNodeMap(this);
-            set => _entities = value;
+            get => field ??= new XmlNamedNodeMap(this);
+            set => field = value;
         }
 
         internal bool IsLoading

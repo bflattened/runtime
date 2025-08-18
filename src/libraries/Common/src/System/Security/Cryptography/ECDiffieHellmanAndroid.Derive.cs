@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
-using Microsoft.Win32.SafeHandles;
 using Internal.Cryptography;
+using Microsoft.Win32.SafeHandles;
 
 namespace System.Security.Cryptography
 {
@@ -154,7 +154,7 @@ namespace System.Security.Cryptography
                     // Arbitrary limit. But it covers secp521r1, which is the biggest common case.
                     const int StackAllocMax = 66;
 
-                    if (secretLength > StackAllocMax)
+                    if ((uint)secretLength > StackAllocMax)
                     {
                         rented = CryptoPool.Rent(secretLength);
                         secret = new Span<byte>(rented, 0, secretLength);

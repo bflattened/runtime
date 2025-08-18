@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections;
-using System.Xml;
-using System.Text;
 using System.Diagnostics;
+using System.Text;
+using System.Xml;
 
 namespace System.IO.Packaging
 {
@@ -112,22 +112,10 @@ namespace System.IO.Packaging
         /// <param name="id">unique identifier</param>
         internal PackageRelationship(Package package, PackagePart? sourcePart, Uri targetUri, TargetMode targetMode, string relationshipType, string id)
         {
-            if (package is null)
-            {
-                throw new ArgumentNullException(nameof(package));
-            }
-            if (targetUri is null)
-            {
-                throw new ArgumentNullException(nameof(targetUri));
-            }
-            if (relationshipType is null)
-            {
-                throw new ArgumentNullException(nameof(relationshipType));
-            }
-            if (id is null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
+            ArgumentNullException.ThrowIfNull(package);
+            ArgumentNullException.ThrowIfNull(targetUri);
+            ArgumentNullException.ThrowIfNull(relationshipType);
+            ArgumentNullException.ThrowIfNull(id);
 
             //sourcePart can be null to represent that the relationships are at the package level
 

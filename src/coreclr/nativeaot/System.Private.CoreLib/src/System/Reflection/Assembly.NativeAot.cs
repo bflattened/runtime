@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Configuration.Assemblies;
-using System.Runtime.Serialization;
 using System.IO;
+using System.Runtime.Serialization;
 
 using Internal.Reflection.Augments;
-using Internal.Reflection.Core.NonPortable;
 
 namespace System.Reflection
 {
@@ -25,7 +24,7 @@ namespace System.Reflection
             throw new PlatformNotSupportedException();
         }
 
-        public static Assembly Load(AssemblyName assemblyRef) => ReflectionAugments.ReflectionCoreCallbacks.Load(assemblyRef, throwOnFileNotFound: true);
+        public static Assembly Load(AssemblyName assemblyRef) => ReflectionAugments.Load(assemblyRef, throwOnFileNotFound: true);
 
         public static Assembly Load(string assemblyString)
         {
@@ -62,5 +61,5 @@ namespace System.Reflection
                 return null;
             }
         }
-   }
+    }
 }

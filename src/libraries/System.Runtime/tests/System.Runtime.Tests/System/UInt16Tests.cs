@@ -43,7 +43,7 @@ namespace System.Tests
         [InlineData((ushort)234, (ushort)456, -1)]
         [InlineData((ushort)234, ushort.MaxValue, -1)]
         [InlineData((ushort)234, null, 1)]
-        public void CompareTo_Other_ReturnsExpected(ushort i, object value, int expected)
+        public void CompareTo_Other_ReturnsExpected(ushort i, object? value, int expected)
         {
             if (value is ushort ushortValue)
             {
@@ -68,7 +68,7 @@ namespace System.Tests
         [InlineData((ushort)789, null, false)]
         [InlineData((ushort)789, "789", false)]
         [InlineData((ushort)789, 789, false)]
-        public static void EqualsTest(ushort i1, object obj, bool expected)
+        public static void EqualsTest(ushort i1, object? obj, bool expected)
         {
             if (obj is ushort)
             {
@@ -402,11 +402,24 @@ namespace System.Tests
                     Assert.Equal(0u, result);
                 }
 
-                Assert.Throws(exceptionType, () => ushort.Parse(Encoding.UTF8.GetBytes(value), style, provider));
+                Exception e = Assert.Throws(exceptionType, () => ushort.Parse(Encoding.UTF8.GetBytes(value), style, provider));
+                if (e is FormatException fe)
+                {
+                    Assert.Contains(value, fe.Message);
+                }
 
                 Assert.False(ushort.TryParse(valueUtf8, style, provider, out result));
                 Assert.Equal(0u, result);
             }
+        }
+
+        [Fact]
+        public static void Parse_Utf8Span_InvalidUtf8()
+        {
+            FormatException fe = Assert.Throws<FormatException>(() => ushort.Parse([0xA0]));
+            Assert.DoesNotContain("A0", fe.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("ReadOnlySpan", fe.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("\uFFFD", fe.Message, StringComparison.Ordinal);
         }
 
         [Theory]

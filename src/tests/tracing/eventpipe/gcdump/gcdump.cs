@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -101,17 +102,17 @@ namespace Tracing.Tests.EventSourceError
                 // and high enough to catch issues. There should be between hundreds and thousands
                 // for each, but the number is variable and the point of the test is to verify
                 // that we get any events at all.
+                
                 if (_seenGCStart
                      && _seenGCStop
                      && _bulkTypeCount > 50
                      && _bulkNodeCount > 50
-                     && _bulkEdgeCount > 50
-                     && _bulkRootEdgeCount > 50
-                     && _bulkRootStaticVarCount > 50)
+                     && _bulkEdgeCount > 50)
                 {
-                    return 100;
+                    // Native AOT hasn't yet implemented statics. Hence _bulkRootStaticVarCount is zero and _bulkRootEdgeCount can be low
+                    if ((TestLibrary.Utilities.IsNativeAot && _bulkRootEdgeCount > 20) || (_bulkRootStaticVarCount > 50 && _bulkRootEdgeCount > 50))
+                        return 100;
                 }
-
 
                 Console.WriteLine($"Test failed due to missing GC heap events.");
                 Console.WriteLine($"_seenGCStart =            {_seenGCStart}");

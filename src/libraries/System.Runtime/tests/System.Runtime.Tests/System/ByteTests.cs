@@ -43,7 +43,7 @@ namespace System.Tests
         [InlineData((byte)234, (byte)235, -1)]
         [InlineData((byte)234, byte.MaxValue, -1)]
         [InlineData((byte)234, null, 1)]
-        public void CompareTo_Other_ReturnsExpected(byte i, object value, int expected)
+        public void CompareTo_Other_ReturnsExpected(byte i, object? value, int expected)
         {
             if (value is byte byteValue)
             {
@@ -68,7 +68,7 @@ namespace System.Tests
         [InlineData((byte)78, null, false)]
         [InlineData((byte)78, "78", false)]
         [InlineData((byte)78, 78, false)]
-        public static void EqualsTest(byte b, object obj, bool expected)
+        public static void EqualsTest(byte b, object? obj, bool expected)
         {
             if (obj is byte b2)
             {
@@ -405,11 +405,24 @@ namespace System.Tests
                     Assert.Equal(0u, result);
                 }
 
-                Assert.Throws(exceptionType, () => byte.Parse(Encoding.UTF8.GetBytes(value), style, provider));
+                Exception e = Assert.Throws(exceptionType, () => byte.Parse(Encoding.UTF8.GetBytes(value), style, provider));
+                if (e is FormatException fe)
+                {
+                    Assert.Contains(value, fe.Message);
+                }
 
                 Assert.False(byte.TryParse(valueUtf8, style, provider, out result));
                 Assert.Equal(0u, result);
             }
+        }
+
+        [Fact]
+        public static void Parse_Utf8Span_InvalidUtf8()
+        {
+            FormatException fe = Assert.Throws<FormatException>(() => byte.Parse([0xA0]));
+            Assert.DoesNotContain("A0", fe.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("ReadOnlySpan", fe.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("\uFFFD", fe.Message, StringComparison.Ordinal);
         }
 
         [Theory]

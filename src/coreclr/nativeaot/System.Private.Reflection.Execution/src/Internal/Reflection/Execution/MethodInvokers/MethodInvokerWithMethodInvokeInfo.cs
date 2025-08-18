@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using global::System;
-using global::System.Reflection;
-
-using global::Internal.Runtime.Augments;
-using global::Internal.Reflection.Core.Execution;
+using System.Reflection.Runtime.General;
 
 using global::Internal.Metadata.NativeFormat;
-using System.Reflection.Runtime.General;
+using global::Internal.Reflection.Core.Execution;
+using global::Internal.Runtime.Augments;
+using global::System;
+using global::System.Reflection;
 
 namespace Internal.Reflection.Execution.MethodInvokers
 {
@@ -43,17 +42,6 @@ namespace Internal.Reflection.Execution.MethodInvokers
                 if (0 != (methodAttributes & MethodAttributes.Static))
                     isStatic = true;
             }
-#if ECMA_METADATA_SUPPORT
-            if (methodHandle.IsEcmaFormatMetadataBased)
-            {
-                var reader = methodHandle.EcmaFormatReader;
-                var method = reader.GetMethodDefinition(methodHandle.EcmaFormatHandle);
-                var blobReader = reader.GetBlobReader(method.Signature);
-                byte sigByte = blobReader.ReadByte();
-                if ((sigByte & (byte)System.Reflection.Metadata.SignatureAttributes.Instance) == 0)
-                    isStatic = true;
-            }
-#endif
 
             if (isStatic)
                 return new StaticMethodInvoker(methodInvokeInfo);
@@ -63,6 +51,6 @@ namespace Internal.Reflection.Execution.MethodInvokers
                 return new InstanceMethodInvoker(methodInvokeInfo, declaringTypeHandle);
         }
 
-        internal MethodInvokeInfo MethodInvokeInfo { get; private set; }
+        internal MethodInvokeInfo MethodInvokeInfo { get; }
     }
 }

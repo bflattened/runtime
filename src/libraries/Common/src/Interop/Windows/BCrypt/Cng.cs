@@ -2,14 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Text;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-
+using System.Text;
 using Internal.Cryptography;
 using Microsoft.Win32.SafeHandles;
-
 using static Interop;
 using static Interop.BCrypt;
 
@@ -33,6 +31,8 @@ namespace Internal.NativeCrypto
             public const string ECDsaP521 = "ECDSA_P521";       // BCRYPT_ECDSA_P521_ALGORITHM
             public const string RSA = "RSA";                    // BCRYPT_RSA_ALGORITHM
             public const string MD5 = "MD5";                    // BCRYPT_MD5_ALGORITHM
+            public const string MLDsa = "ML-DSA";               // BCRYPT_MLDSA_ALGORITHM
+            public const string MLKem = "ML-KEM";               // BCRYPT_MLKEM_ALGORITHM
             public const string Sha1 = "SHA1";                  // BCRYPT_SHA1_ALGORITHM
             public const string Sha256 = "SHA256";              // BCRYPT_SHA256_ALGORITHM
             public const string Sha384 = "SHA384";              // BCRYPT_SHA384_ALGORITHM
@@ -135,6 +135,9 @@ namespace Internal.NativeCrypto
 
             [LibraryImport(Libraries.BCrypt, EntryPoint = "BCryptSetProperty", StringMarshalling = StringMarshalling.Utf16)]
             private static partial NTSTATUS BCryptSetIntPropertyPrivate(SafeBCryptHandle hObject, string pszProperty, ref int pdwInput, int cbInput, int dwFlags);
+
+            [LibraryImport(Libraries.BCrypt, StringMarshalling = StringMarshalling.Utf16)]
+            public static partial NTSTATUS BCryptSetProperty(SafeBCryptHandle hObject, string pszProperty, ReadOnlySpan<byte> pbInput, int cbInput, int dwFlags);
 
             public static unsafe NTSTATUS BCryptSetIntProperty(SafeBCryptHandle hObject, string pszProperty, ref int pdwInput, int dwFlags)
             {

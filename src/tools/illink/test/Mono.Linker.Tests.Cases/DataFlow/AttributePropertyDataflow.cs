@@ -5,369 +5,415 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Mono.Linker.Tests.Cases.Expectations.Assertions;
+using Mono.Linker.Tests.Cases.Expectations.Metadata;
 
 namespace Mono.Linker.Tests.Cases.DataFlow
 {
-	[Kept]
-	[ExpectedNoWarnings]
-	class AttributePropertyDataflow
-	{
-		public static void Main ()
-		{
-			AttributesOnMethod.Test ();
-			AttributesOnProperty.Test ();
-			AttributesOnField.Test ();
-			AttributesOnEvent.Test ();
-			AttributeWithConditionalExpression.Test ();
-			RecursivePropertyDataFlow.Test ();
-			RecursiveMethodDataFlow.Test ();
-			RecursiveEventDataFlow.Test ();
-			RecursiveFieldDataFlow.Test ();
-		}
+    [Kept]
+    [ExpectedNoWarnings]
+    [SetupIlcWholeProgramAnalysis]
+    class AttributePropertyDataflow
+    {
+        public static void Main()
+        {
+            AttributesOnMethod.Test();
+            AttributesOnProperty.Test();
+            AttributesOnField.Test();
+            AttributesOnEvent.Test();
+            AttributeWithConditionalExpression.Test();
+            RecursivePropertyDataFlow.Test();
+            RecursiveMethodDataFlow.Test();
+            RecursiveEventDataFlow.Test();
+            RecursiveFieldDataFlow.Test();
+        }
 
-		class AttributesOnMethod
-		{
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicConstructorsAttribute))]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[KeptAttributeAttribute (typeof (KeepsPublicFieldsAttribute))]
-			[KeptAttributeAttribute (typeof (TypeArrayAttribute))]
-			[KeepsPublicConstructors (Type = typeof (ClassWithKeptPublicConstructor))]
-			[KeepsPublicMethods (TypeName = "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributesOnMethod+ClassWithKeptPublicMethods")]
-			[KeepsPublicFields (Type = null, TypeName = null)]
-			[TypeArray (Types = new Type[] { typeof (AttributePropertyDataflow) })]
-			// Trimmer/NativeAot only for now - https://github.com/dotnet/linker/issues/2273
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
-			public static void Test () {
-				typeof (AttributesOnMethod).GetMethod ("Test").GetCustomAttribute (typeof (KeepsPublicConstructorsAttribute));
-				typeof (AttributePropertyDataflow).GetMethod ("Test").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-			}
+        class AttributesOnMethod
+        {
+            [Kept]
+            public static void Test()
+            {
+                TestKeepsPublicConstructors();
+                TestKeepsPublicMethods();
+                TestKeepsPublicMethodsByName();
+                TestKeepsPublicFields();
+                TestTypeArray();
+            }
 
-			[Kept]
-			class ClassWithKeptPublicConstructor
-			{
-				[Kept]
-				public ClassWithKeptPublicConstructor (int unused) { }
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicConstructorsAttribute))]
+            [KeepsPublicConstructors(Type = typeof(ClassWithKeptPublicConstructor))]
+            public static void TestKeepsPublicConstructors()
+            {
+                typeof(AttributesOnMethod).GetMethod(nameof(TestKeepsPublicConstructors)).GetCustomAttribute(typeof(KeepsPublicConstructorsAttribute));
+            }
 
-				private ClassWithKeptPublicConstructor (short unused) { }
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(Type = typeof(ClassWithKeptPublicMethods))]
+            public static void TestKeepsPublicMethods()
+            {
+                typeof(AttributesOnMethod).GetMethod(nameof(TestKeepsPublicMethods)).GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+            }
 
-				public void Method () { }
-			}
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethodsKeptByName--")]
+            [KeepsPublicMethods(TypeName = "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributesOnMethod+ClassWithKeptPublicMethodsKeptByName, test")]
+            public static void TestKeepsPublicMethodsByName()
+            {
+                typeof(AttributesOnMethod).GetMethod(nameof(TestKeepsPublicMethodsByName)).GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+            }
 
-			[Kept]
-			class ClassWithKeptPublicMethods
-			{
-				[Kept]
-				[KeptAttributeAttribute (typeof (RequiresUnreferencedCodeAttribute))]
-				[RequiresUnreferencedCode ("--ClassWithKeptPublicMethods--")]
-				public static void KeptMethod () { }
-				static void Method () { }
-			}
-		}
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicFieldsAttribute))]
+            [KeepsPublicFields(Type = null, TypeName = null)]
+            public static void TestKeepsPublicFields()
+            {
+                typeof(AttributesOnMethod).GetMethod(nameof(TestKeepsPublicFields)).GetCustomAttribute(typeof(KeepsPublicFieldsAttribute));
+            }
 
-		class AttributesOnField
-		{
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--")]
-			[KeepsPublicMethods (Type = typeof (ClassWithKeptPublicMethods))]
-			public static bool field;
+            [Kept]
+            [KeptAttributeAttribute(typeof(TypeArrayAttribute))]
+            [TypeArray(Types = new Type[] { typeof(AttributePropertyDataflow) })]
+            public static void TestTypeArray()
+            {
+                typeof(AttributesOnMethod).GetMethod(nameof(TestTypeArray)).GetCustomAttribute(typeof(TypeArrayAttribute));
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (AttributesOnField).GetField ("field").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				field = true;
-			}
+            [Kept]
+            class ClassWithKeptPublicConstructor
+            {
+                [Kept]
+                public ClassWithKeptPublicConstructor(int unused) { }
 
-			[Kept]
-			class ClassWithKeptPublicMethods
-			{
-				[Kept]
-				[KeptAttributeAttribute (typeof (RequiresUnreferencedCodeAttribute))]
-				[RequiresUnreferencedCode ("--ClassWithKeptPublicMethods--")]
-				public static void KeptMethod () { }
-				static void Method () { }
-			}
-		}
+                private ClassWithKeptPublicConstructor(short unused) { }
 
-		class AttributesOnProperty
-		{
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--")]
-			[KeepsPublicMethods (Type = typeof (ClassWithKeptPublicMethods))]
-			public static bool Property { [Kept] get; [Kept] set; }
+                public void Method() { }
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (AttributesOnProperty).GetProperty ("Property").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				Property = true;
-			}
+            [Kept]
+            class ClassWithKeptPublicMethods
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethods--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
 
-			[Kept]
-			class ClassWithKeptPublicMethods
-			{
-				[Kept]
-				[KeptAttributeAttribute (typeof (RequiresUnreferencedCodeAttribute))]
-				[RequiresUnreferencedCode ("--ClassWithKeptPublicMethods--")]
-				public static void KeptMethod () { }
-				static void Method () { }
-			}
-		}
+            [Kept]
+            class ClassWithKeptPublicMethodsKeptByName
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethodsKeptByName--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
+        }
 
-		class AttributesOnEvent
-		{
-			[field: Kept]
-			[Kept]
-			[KeptEventAddMethod]
-			[KeptEventRemoveMethod]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--")]
-			[KeepsPublicMethods (Type = typeof (ClassWithKeptPublicMethods))]
-			public static event EventHandler Event_FieldSyntax;
+        class AttributesOnField
+        {
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(Type = typeof(ClassWithKeptPublicMethods))]
+            public static bool field;
 
-			[field: Kept]
-			[Kept]
-			[KeptEventAddMethod]
-			[KeptEventRemoveMethod]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--")]
-			[KeepsPublicMethods (Type = typeof (ClassWithKeptPublicMethods))]
-			public static event EventHandler Event_PropertySyntax {
-				add { }
-				remove { }
-			}
+            [Kept]
+            public static void Test()
+            {
+                typeof(AttributesOnField).GetField("field").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                field = true;
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (AttributesOnEvent).GetEvent ("Event_FieldSyntax").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				typeof (AttributesOnEvent).GetEvent ("Event_PropertySyntax").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				Event_FieldSyntax += (sender, args) => { };
-				Event_PropertySyntax += (sender, args) => { };
-			}
+            [Kept]
+            class ClassWithKeptPublicMethods
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethods--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
+        }
 
-			[Kept]
-			class ClassWithKeptPublicMethods
-			{
-				[Kept]
-				[KeptAttributeAttribute (typeof (RequiresUnreferencedCodeAttribute))]
-				[RequiresUnreferencedCode ("--ClassWithKeptPublicMethods--")]
-				public static void KeptMethod () { }
-				static void Method () { }
-			}
-		}
+        class AttributesOnProperty
+        {
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(Type = typeof(ClassWithKeptPublicMethods))]
+            public static bool Property { [Kept] get; [Kept] set; }
 
-		class AttributeWithConditionalExpression
-		{
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			// Trimmer/NativeAot only for now - https://github.com/dotnet/linker/issues/2273
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
-			[KeepsPublicMethods (TypeName = 1 + 1 == 2 ? "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributeWithConditionalExpression+ClassWithKeptPublicMethods" : null)]
-			public static void Test ()
-			{
-				typeof (AttributeWithConditionalExpression).GetMethod ("Test").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				typeof (AttributeWithConditionalExpression).GetField ("field").GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-			}
+            [Kept]
+            public static void Test()
+            {
+                typeof(AttributesOnProperty).GetProperty("Property").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                Property = true;
+            }
 
-			// This testcase is an example where the analyzer may have a branch value while analyzing an attribute,
-			// where the owning symbol is not a method.
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			// NativeAot doesn't handle the type name on fields: https://github.com/dotnet/runtime/issues/92259
-			[ExpectedWarning ("IL2105", "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributeWithConditionalExpression+ClassWithKeptPublicMethods", ProducedBy = Tool.NativeAot)]
-			[ExpectedWarning ("IL2026", "--ClassWithKeptPublicMethods--", ProducedBy = Tool.Trimmer)]
-			[KeepsPublicMethods (TypeName = 1 + 1 == 2 ? "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributeWithConditionalExpression+ClassWithKeptPublicMethods" : null)]
-			public static int field;
+            [Kept]
+            class ClassWithKeptPublicMethods
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethods--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
+        }
 
-			[Kept]
-			class ClassWithKeptPublicMethods
-			{
-				[Kept]
-				[KeptAttributeAttribute (typeof (RequiresUnreferencedCodeAttribute))]
-				[RequiresUnreferencedCode ("--ClassWithKeptPublicMethods--")]
-				public static void KeptMethod () { }
-				static void Method () { }
-			}
-		}
+        class AttributesOnEvent
+        {
+            [field: Kept]
+            [Kept]
+            [KeptEventAddMethod]
+            [KeptEventRemoveMethod]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(Type = typeof(ClassWithKeptPublicMethods))]
+            public static event EventHandler Event_FieldSyntax;
 
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class KeepsPublicConstructorsAttribute : Attribute
-		{
-			[Kept]
-			public KeepsPublicConstructorsAttribute ()
-			{
-			}
+            [field: Kept]
+            [Kept]
+            [KeptEventAddMethod]
+            [KeptEventRemoveMethod]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(Type = typeof(ClassWithKeptPublicMethods))]
+            public static event EventHandler Event_PropertySyntax
+            {
+                add { }
+                remove { }
+            }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicConstructors)]
-			public Type Type { get; [Kept] set; }
-		}
+            [Kept]
+            public static void Test()
+            {
+                typeof(AttributesOnEvent).GetEvent("Event_FieldSyntax").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                typeof(AttributesOnEvent).GetEvent("Event_PropertySyntax").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                Event_FieldSyntax += (sender, args) => { };
+                Event_PropertySyntax += (sender, args) => { };
+            }
 
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class KeepsPublicMethodsAttribute : Attribute
-		{
-			[Kept]
-			public KeepsPublicMethodsAttribute ()
-			{
-			}
+            [Kept]
+            class ClassWithKeptPublicMethods
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethods--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
+        }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicMethods)]
-			public Type Type { get; [Kept] set; }
+        class AttributeWithConditionalExpression
+        {
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(TypeName = 1 + 1 == 2 ? "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributeWithConditionalExpression+ClassWithKeptPublicMethodsKeptByName, test" : null)]
+            public static void Test()
+            {
+                typeof(AttributeWithConditionalExpression).GetMethod("Test").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                typeof(AttributeWithConditionalExpression).GetField("field").GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+            }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicMethods)]
-			public string TypeName { get; [Kept] set; }
-		}
+            // This testcase is an example where the analyzer may have a branch value while analyzing an attribute,
+            // where the owning symbol is not a method.
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [ExpectedWarning("IL2026", "--ClassWithKeptPublicMethods--")]
+            [KeepsPublicMethods(TypeName = 1 + 1 == 2 ? "Mono.Linker.Tests.Cases.DataFlow.AttributePropertyDataflow+AttributeWithConditionalExpression+ClassWithKeptPublicMethodsKeptByName, test" : null)]
+            public static int field;
 
-		// Used to test null values
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class KeepsPublicFieldsAttribute : Attribute
-		{
-			[Kept]
-			public KeepsPublicFieldsAttribute ()
-			{
-			}
+            [Kept]
+            class ClassWithKeptPublicMethodsKeptByName
+            {
+                [Kept]
+                [KeptAttributeAttribute(typeof(RequiresUnreferencedCodeAttribute))]
+                [RequiresUnreferencedCode("--ClassWithKeptPublicMethods--")]
+                public static void KeptMethod() { }
+                static void Method() { }
+            }
+        }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicFields)]
-			public Type Type { get; [Kept] set; }
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class KeepsPublicConstructorsAttribute : Attribute
+        {
+            [Kept]
+            public KeepsPublicConstructorsAttribute()
+            {
+            }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicFields)]
-			public string TypeName { get; [Kept] set; }
-		}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+            public Type Type { get; [Kept] set; }
+        }
 
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class KeepsPublicPropertiesAttribute : Attribute
-		{
-			[Kept]
-			public KeepsPublicPropertiesAttribute ()
-			{
-			}
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class KeepsPublicMethodsAttribute : Attribute
+        {
+            [Kept]
+            public KeepsPublicMethodsAttribute()
+            {
+            }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicProperties)]
-			public Type Type { get; [Kept] set; }
-		}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            public Type Type { get; [Kept] set; }
 
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class KeepsPublicEventsAttribute : Attribute
-		{
-			[Kept]
-			public KeepsPublicEventsAttribute ()
-			{
-			}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            public string TypeName { get; [Kept] set; }
+        }
 
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (DynamicallyAccessedMembersAttribute))]
-			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicEvents)]
-			public Type Type { get; [Kept] set; }
-		}
+        // Used to test null values
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class KeepsPublicFieldsAttribute : Attribute
+        {
+            [Kept]
+            public KeepsPublicFieldsAttribute()
+            {
+            }
 
-		[Kept]
-		[KeptBaseType (typeof (Attribute))]
-		class TypeArrayAttribute : Attribute
-		{
-			[Kept]
-			public TypeArrayAttribute ()
-			{
-			}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)]
+            public Type Type { get; [Kept] set; }
 
-			[field: Kept]
-			[Kept]
-			public Type[] Types { get; [Kept] set; }
-		}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)]
+            public string TypeName { get; [Kept] set; }
+        }
 
-		[Kept]
-		class RecursivePropertyDataFlow
-		{
-			[field: Kept]
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicPropertiesAttribute))]
-			[KeepsPublicProperties (Type = typeof (RecursivePropertyDataFlow))]
-			public static int Property { [Kept] get; [Kept] set; }
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class KeepsPublicPropertiesAttribute : Attribute
+        {
+            [Kept]
+            public KeepsPublicPropertiesAttribute()
+            {
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (RecursivePropertyDataFlow).GetProperty (nameof (Property)).GetCustomAttribute (typeof (KeepsPublicPropertiesAttribute));
-				Property = 0;
-			}
-		}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+            public Type Type { get; [Kept] set; }
+        }
 
-		[Kept]
-		class RecursiveEventDataFlow
-		{
-			[field: Kept]
-			[Kept]
-			[KeptEventAddMethod]
-			[KeptEventRemoveMethod]
-			[KeptAttributeAttribute (typeof (KeepsPublicEventsAttribute))]
-			[KeepsPublicEvents (Type = typeof (RecursiveEventDataFlow))]
-			public static event EventHandler Event;
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class KeepsPublicEventsAttribute : Attribute
+        {
+            [Kept]
+            public KeepsPublicEventsAttribute()
+            {
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (RecursiveEventDataFlow).GetEvent (nameof (Event)).GetCustomAttribute (typeof (KeepsPublicEventsAttribute));
-				Event += (sender, e) => { };
-			}
-		}
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(DynamicallyAccessedMembersAttribute))]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicEvents)]
+            public Type Type { get; [Kept] set; }
+        }
 
-		[Kept]
-		class RecursiveFieldDataFlow
-		{
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicFieldsAttribute))]
-			[KeepsPublicFields (Type = typeof (RecursiveFieldDataFlow))]
-			public static int field;
+        [Kept]
+        [KeptBaseType(typeof(Attribute))]
+        class TypeArrayAttribute : Attribute
+        {
+            [Kept]
+            public TypeArrayAttribute()
+            {
+            }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (RecursiveMethodDataFlow).GetField (nameof (field)).GetCustomAttribute (typeof (KeepsPublicFieldsAttribute));
-				field = 0;
-			}
-		}
+            [field: Kept]
+            [Kept]
+            public Type[] Types { get; [Kept] set; }
+        }
 
-		[Kept]
-		class RecursiveMethodDataFlow
-		{
-			[Kept]
-			[KeptAttributeAttribute (typeof (KeepsPublicMethodsAttribute))]
-			[KeepsPublicMethods (Type = typeof (RecursiveMethodDataFlow))]
-			public static void Method () { }
+        [Kept]
+        class RecursivePropertyDataFlow
+        {
+            [field: Kept]
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicPropertiesAttribute))]
+            [KeepsPublicProperties(Type = typeof(RecursivePropertyDataFlow))]
+            public static int Property { [Kept] get; [Kept] set; }
 
-			[Kept]
-			public static void Test ()
-			{
-				typeof (RecursiveMethodDataFlow).GetMethod (nameof (Method)).GetCustomAttribute (typeof (KeepsPublicMethodsAttribute));
-				Method ();
-			}
-		}
-	}
+            [Kept]
+            public static void Test()
+            {
+                typeof(RecursivePropertyDataFlow).GetProperty(nameof(Property)).GetCustomAttribute(typeof(KeepsPublicPropertiesAttribute));
+                Property = 0;
+            }
+        }
+
+        [Kept]
+        class RecursiveEventDataFlow
+        {
+            [field: Kept]
+            [Kept]
+            [KeptEventAddMethod]
+            [KeptEventRemoveMethod]
+            [KeptAttributeAttribute(typeof(KeepsPublicEventsAttribute))]
+            [KeepsPublicEvents(Type = typeof(RecursiveEventDataFlow))]
+            public static event EventHandler Event;
+
+            [Kept]
+            public static void Test()
+            {
+                typeof(RecursiveEventDataFlow).GetEvent(nameof(Event)).GetCustomAttribute(typeof(KeepsPublicEventsAttribute));
+                Event += (sender, e) => { };
+            }
+        }
+
+        [Kept]
+        class RecursiveFieldDataFlow
+        {
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicFieldsAttribute))]
+            [KeepsPublicFields(Type = typeof(RecursiveFieldDataFlow))]
+            public static int field;
+
+            [Kept]
+            public static void Test()
+            {
+                typeof(RecursiveMethodDataFlow).GetField(nameof(field)).GetCustomAttribute(typeof(KeepsPublicFieldsAttribute));
+                field = 0;
+            }
+        }
+
+        [Kept]
+        class RecursiveMethodDataFlow
+        {
+            [Kept]
+            [KeptAttributeAttribute(typeof(KeepsPublicMethodsAttribute))]
+            [KeepsPublicMethods(Type = typeof(RecursiveMethodDataFlow))]
+            public static void Method() { }
+
+            [Kept]
+            public static void Test()
+            {
+                typeof(RecursiveMethodDataFlow).GetMethod(nameof(Method)).GetCustomAttribute(typeof(KeepsPublicMethodsAttribute));
+                Method();
+            }
+        }
+    }
 }

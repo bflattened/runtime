@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace System.Diagnostics
@@ -36,10 +36,7 @@ namespace System.Diagnostics
         /// <param name="list">Initial list to store in the collection.</param>
         public ActivityTagsCollection(IEnumerable<KeyValuePair<string, object?>> list)
         {
-            if (list is null)
-            {
-                throw new ArgumentNullException(nameof(list));
-            }
+            ArgumentNullException.ThrowIfNull(list);
 
             foreach (KeyValuePair<string, object?> kvp in list)
             {
@@ -68,10 +65,7 @@ namespace System.Diagnostics
 
             set
             {
-                if (key == null)
-                {
-                    throw new ArgumentNullException(nameof(key));
-                }
+                ArgumentNullException.ThrowIfNull(key);
 
                 int index = FindIndex(key);
                 if (value == null)
@@ -144,10 +138,7 @@ namespace System.Diagnostics
         /// <param name="value">The tag value.</param>
         public void Add(string key, object? value)
         {
-            if (key is null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
+            ArgumentNullException.ThrowIfNull(key);
 
             int index = FindIndex(key);
             if (index >= 0)
@@ -221,10 +212,7 @@ namespace System.Diagnostics
         /// <returns>True if the item existed and removed. False otherwise.</returns>
         public bool Remove(string key)
         {
-            if (key is null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
+            ArgumentNullException.ThrowIfNull(key);
 
             int index = FindIndex(key);
             if (index >= 0)

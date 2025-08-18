@@ -42,35 +42,34 @@ private:
 template <typename TCallback>
 void DataFlow::ForwardAnalysis(TCallback& callback)
 {
-    jitstd::list<BasicBlock*> worklist(jitstd::allocator<void>(m_pCompiler->getAllocator()));
-
-    worklist.insert(worklist.begin(), m_pCompiler->fgFirstBB);
-    while (!worklist.empty())
+    if (m_pCompiler->m_dfsTree == nullptr)
     {
-        BasicBlock* block = *(worklist.begin());
-        worklist.erase(worklist.begin());
-
-        callback.StartMerge(block);
-        if (m_pCompiler->bbIsHandlerBeg(block))
-        {
-            EHblkDsc* ehDsc = m_pCompiler->ehGetBlockHndDsc(block);
-            callback.MergeHandler(block, ehDsc->ebdTryBeg, ehDsc->ebdTryLast);
-        }
-        else
-        {
-            FlowEdge* preds = m_pCompiler->BlockPredsWithEH(block);
-            for (FlowEdge* pred = preds; pred; pred = pred->getNextPredEdge())
-            {
-                callback.Merge(block, pred->getSourceBlock(), pred->getDupCount());
-            }
-        }
-
-        if (callback.EndMerge(block))
-        {
-            block->VisitAllSuccs(m_pCompiler, [&worklist](BasicBlock* succ) {
-                worklist.insert(worklist.end(), succ);
-                return BasicBlockVisit::Continue;
-            });
-        }
+        m_pCompiler->m_dfsTree = m_pCompiler->fgComputeDfs();
     }
+
+    bool changed;
+    do
+    {
+        changed = false;
+        for (unsigned i = m_pCompiler->m_dfsTree->GetPostOrderCount(); i > 0; i--)
+        {
+            BasicBlock* block = m_pCompiler->m_dfsTree->GetPostOrder(i - 1);
+
+            callback.StartMerge(block);
+            if (m_pCompiler->bbIsHandlerBeg(block))
+            {
+                EHblkDsc* ehDsc = m_pCompiler->ehGetBlockHndDsc(block);
+                callback.MergeHandler(block, ehDsc->ebdTryBeg, ehDsc->ebdTryLast);
+            }
+            else
+            {
+                for (FlowEdge* pred : block->PredEdges())
+                {
+                    callback.Merge(block, pred->getSourceBlock(), pred->getDupCount());
+                }
+            }
+
+            changed |= callback.EndMerge(block);
+        }
+    } while (changed && m_pCompiler->m_dfsTree->HasCycle());
 }

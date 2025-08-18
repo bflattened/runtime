@@ -7,12 +7,17 @@ using System.Threading;
 
 namespace System.Net
 {
+    // NOTE: While this class is not explicitly marked as obsolete,
+    // it effectively is by virtue of ServicePointManager being obsolete,
+    // where ServicePointManager is the only way to obtain ServicePoint instances.
     public class ServicePoint
     {
         private int _connectionLeaseTimeout = -1;
         private int _maxIdleTime = 100 * 1000;
         private int _receiveBufferSize = -1;
         private int _connectionLimit;
+
+        internal TcpKeepAlive? KeepAlive { get; set; }
 
         internal ServicePoint(Uri address)
         {
@@ -87,11 +92,20 @@ namespace System.Net
 
         public void SetTcpKeepAlive(bool enabled, int keepAliveTime, int keepAliveInterval)
         {
-            if (enabled)
+            if (!enabled)
             {
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keepAliveTime);
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keepAliveInterval);
+                KeepAlive = null;
+                return;
             }
+
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keepAliveTime);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keepAliveInterval);
+
+            KeepAlive = new TcpKeepAlive
+            {
+                Time = keepAliveTime,
+                Interval = keepAliveInterval
+            };
         }
     }
 }

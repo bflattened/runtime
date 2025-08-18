@@ -17,12 +17,12 @@ namespace System.Net.Http.Json
         [RequiresUnreferencedCode(HttpContentJsonExtensions.SerializationUnreferencedCodeMessage)]
         [RequiresDynamicCode(HttpContentJsonExtensions.SerializationDynamicCodeMessage)]
         private static Task<object?> FromJsonAsyncCore(Func<HttpClient, Uri?, CancellationToken, Task<HttpResponseMessage>> getMethod, HttpClient client, Uri? requestUri, Type type, JsonSerializerOptions? options, CancellationToken cancellationToken = default) =>
-            FromJsonAsyncCore(getMethod, client, requestUri, static (stream, options, cancellation) => JsonSerializer.DeserializeAsync(stream, options.type, options.options ?? JsonHelpers.s_defaultSerializerOptions, cancellation), (type, options), cancellationToken);
+            FromJsonAsyncCore(getMethod, client, requestUri, static (stream, options, cancellation) => JsonSerializer.DeserializeAsync(stream, options.type, options.options ?? JsonSerializerOptions.Web, cancellation), (type, options), cancellationToken);
 
         [RequiresUnreferencedCode(HttpContentJsonExtensions.SerializationUnreferencedCodeMessage)]
         [RequiresDynamicCode(HttpContentJsonExtensions.SerializationDynamicCodeMessage)]
         private static Task<TValue?> FromJsonAsyncCore<TValue>(Func<HttpClient, Uri?, CancellationToken, Task<HttpResponseMessage>> getMethod, HttpClient client, Uri? requestUri, JsonSerializerOptions? options, CancellationToken cancellationToken = default) =>
-            FromJsonAsyncCore(getMethod, client, requestUri, static (stream, options, cancellation) => JsonSerializer.DeserializeAsync<TValue>(stream, options ?? JsonHelpers.s_defaultSerializerOptions, cancellation), options, cancellationToken);
+            FromJsonAsyncCore(getMethod, client, requestUri, static (stream, options, cancellation) => JsonSerializer.DeserializeAsync<TValue>(stream, options ?? JsonSerializerOptions.Web, cancellation), options, cancellationToken);
 
         private static Task<object?> FromJsonAsyncCore(Func<HttpClient, Uri?, CancellationToken, Task<HttpResponseMessage>> getMethod, HttpClient client, Uri? requestUri, Type type, JsonSerializerContext context, CancellationToken cancellationToken = default) =>
             FromJsonAsyncCore(getMethod, client, requestUri, static (stream, options, cancellation) => JsonSerializer.DeserializeAsync(stream, options.type, options.context, cancellation), (type, context), cancellationToken);
@@ -38,10 +38,7 @@ namespace System.Net.Http.Json
             TJsonOptions jsonOptions,
             CancellationToken cancellationToken)
         {
-            if (client is null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
+            ArgumentNullException.ThrowIfNull(client);
 
             TimeSpan timeout = client.Timeout;
 
@@ -68,7 +65,9 @@ namespace System.Net.Http.Json
 
             bool usingResponseHeadersRead = !ReferenceEquals(getMethod, s_deleteAsync);
 
+#pragma warning disable CA2025
             return Core(client, responseTask, usingResponseHeadersRead, linkedCTS, deserializeMethod, jsonOptions, cancellationToken);
+#pragma warning restore
 
             static async Task<TValue?> Core(
                 HttpClient client,
@@ -95,7 +94,7 @@ namespace System.Net.Http.Json
                     {
                         // Matches how HttpClient throws a timeout exception.
                         string message = SR.Format(SR.net_http_request_timedout, client.Timeout.TotalSeconds);
-#if NETCOREAPP
+#if NET
                         throw new TaskCanceledException(message, new TimeoutException(oce.Message, oce), oce.CancellationToken);
 #else
                         throw new TaskCanceledException(message, new TimeoutException(oce.Message, oce));

@@ -47,7 +47,6 @@ namespace System.Tests
             NonArrayBaseTypes = new List<Type>()
             {
                 typeof(int),
-                typeof(void),
                 typeof(int*),
                 typeof(Outside),
                 typeof(Outside<int>),
@@ -150,9 +149,6 @@ namespace System.Tests
 
         [Theory]
         [MemberData(nameof(FindMembers_TestData))]
-        [UnconditionalSuppressMessage ("ReflectionAnalysis", "IL2118",
-            Justification = "DAM on FindMembers references compiler-generated members which use reflection. " +
-                            "These members are not accessed by the test.")]
         public void FindMembers_Invoke_ReturnsExpected(MemberTypes memberType, BindingFlags bindingAttr, MemberFilter filter, object filterCriteria, int expectedLength)
         {
             Assert.Equal(expectedLength, typeof(TypeTests).FindMembers(memberType, bindingAttr, filter, filterCriteria).Length);
@@ -244,7 +240,6 @@ namespace System.Tests
         public static IEnumerable<object[]> MakeArray_UnusualTypes_TestData()
         {
             yield return new object[] { typeof(StaticClass) };
-            yield return new object[] { typeof(void) };
             yield return new object[] { typeof(GenericClass<>) };
             yield return new object[] { typeof(GenericClass<>).MakeGenericType(typeof(GenericClass<>)) };
             yield return new object[] { typeof(GenericClass<>).GetTypeInfo().GetGenericArguments()[0] };
@@ -252,7 +247,6 @@ namespace System.Tests
 
         [Theory]
         [MemberData(nameof(MakeArray_UnusualTypes_TestData))]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/52072", TestPlatforms.iOS | TestPlatforms.tvOS | TestPlatforms.MacCatalyst)]
         public void MakeArrayType_UnusualTypes_ReturnsExpected(Type t)
         {
             Type tArray = t.MakeArrayType();
@@ -298,18 +292,19 @@ namespace System.Tests
             Assert.Equal(t.ToString() + "[,]", tArray.ToString());
         }
 
-        public static IEnumerable<object[]> MakeArrayType_ByRef_TestData()
+        public static IEnumerable<object[]> MakeArrayType_InvalidElementType_TestData()
         {
             yield return new object[] { typeof(int).MakeByRefType() };
             yield return new object[] { typeof(TypedReference) };
             yield return new object[] { typeof(ArgIterator) };
             yield return new object[] { typeof(RuntimeArgumentHandle) };
             yield return new object[] { typeof(Span<int>) };
+            yield return new object[] { typeof(void) };
         }
 
         [Theory]
-        [MemberData(nameof(MakeArrayType_ByRef_TestData))]
-        public void MakeArrayType_ByRef_ThrowsTypeLoadException(Type t)
+        [MemberData(nameof(MakeArrayType_InvalidElementType_TestData))]
+        public void MakeArrayType_InvalidElementType_ThrowsTypeLoadException(Type t)
         {
             Assert.Throws<TypeLoadException>(() => t.MakeArrayType());
         }
@@ -508,11 +503,33 @@ namespace System.Tests
         [InlineData("Outside[][]", typeof(Outside[][]))]
         [InlineData("Outside`1[System.Nullable`1[System.Boolean]]", typeof(Outside<bool?>))]
         [InlineData(".Outside`1", typeof(Outside<>))]
-        [InlineData(".Outside`1+.Inside`1", typeof(Outside<>.Inside<>))]
         public void GetTypeByName_ValidType_ReturnsExpected(string typeName, Type expectedType)
         {
             Assert.Equal(expectedType, Type.GetType(typeName, throwOnError: false, ignoreCase: false));
             Assert.Equal(expectedType, Type.GetType(typeName.ToLower(), throwOnError: false, ignoreCase: true));
+        }
+
+        public static IEnumerable<object[]> GetTypeByName_InvalidElementType()
+        {
+            Type expectedException = PlatformDetection.IsMonoRuntime
+                ? typeof(ArgumentException) // https://github.com/dotnet/runtime/issues/45033
+                : typeof(TypeLoadException);
+
+            yield return new object[] { "System.Int32&&", expectedException, true };
+            yield return new object[] { "System.Int32&*", expectedException, true };
+            yield return new object[] { "System.Int32&[]", expectedException, true };
+            yield return new object[] { "System.Int32&[*]", expectedException, true };
+            yield return new object[] { "System.Int32&[,]", expectedException, true };
+
+            // https://github.com/dotnet/runtime/issues/45033
+            if (!PlatformDetection.IsMonoRuntime)
+            {
+                yield return new object[] { "..Outside`1", expectedException, false };
+                yield return new object[] { ".Outside`1+.Inside`1", expectedException, false };
+
+                yield return new object[] { "System.Void[]", expectedException, true };
+                yield return new object[] { "System.TypedReference[]", expectedException, true };
+            }
         }
 
         [Theory]
@@ -523,7 +540,7 @@ namespace System.Tests
         [InlineData("Outside`2", typeof(TypeLoadException), false)]
         [InlineData("Outside`1[System.Boolean, System.Int32]", typeof(ArgumentException), true)]
         [InlineData(".System.Int32", typeof(TypeLoadException), false)]
-        [InlineData("..Outside`1", typeof(TypeLoadException), false)]
+        [MemberData(nameof(GetTypeByName_InvalidElementType))]
         public void GetTypeByName_Invalid(string typeName, Type expectedException, bool alwaysThrowsException)
         {
             if (!alwaysThrowsException)
@@ -582,7 +599,7 @@ namespace System.Tests
         [InlineData(typeof(ushort), TypeCode.UInt16)]
         [InlineData(typeof(uint), TypeCode.UInt32)]
         [InlineData(typeof(ulong), TypeCode.UInt64)]
-        public void GetTypeCode_ValidType_ReturnsExpected(Type t, TypeCode typeCode)
+        public void GetTypeCode_ValidType_ReturnsExpected(Type? t, TypeCode typeCode)
         {
             Assert.Equal(typeCode, Type.GetTypeCode(t));
         }
@@ -607,7 +624,6 @@ namespace System.Tests
         }
 
         [Fact]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/52072", TestPlatforms.iOS | TestPlatforms.tvOS | TestPlatforms.MacCatalyst)]
         public void IsSZArray_TrueForSZArrayTypes()
         {
             foreach (Type type in NonArrayBaseTypes.Select(nonArrayBaseType => nonArrayBaseType.MakeArrayType()))
@@ -659,7 +675,6 @@ namespace System.Tests
         }
 
         [Fact]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/52072", TestPlatforms.iOS | TestPlatforms.tvOS | TestPlatforms.MacCatalyst)]
         public void IsVariableBoundArray_FalseForSZArrayTypes()
         {
             foreach (Type type in NonArrayBaseTypes.Select(nonArrayBaseType => nonArrayBaseType.MakeArrayType()))
@@ -1171,9 +1186,6 @@ namespace System.Tests
                     }
                     else
                     {
-                        // [ActiveIssue("https://github.com/dotnet/runtime/issues/90863")]
-                        if (classType.Type == typeof(SIMs.C2Implicit<string>) && interfaceType.Type == typeof(SIMs.I1<string>)) continue;
-
                         // It's implemented implicitly by the level 2 interface
                         MTarget = interfaceType.Level2InterfaceType.GetMethod(interfaceType.MethodNamePrefix + "M", bindingFlags);
                         GTarget = interfaceType.Level2InterfaceType.GetMethod(interfaceType.MethodNamePrefix + "G", bindingFlags);
@@ -1298,7 +1310,7 @@ namespace System.Tests
 
         static class DIMs
         {
-            
+
             internal interface I1
             {
                 void M() { throw new Exception("e"); }

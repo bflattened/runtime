@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel;
-using System.Runtime.Serialization;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics;
-
+using System.Runtime.Serialization;
 using static System.WeakReferenceHandleTags;
 
 namespace System
@@ -152,7 +151,11 @@ namespace System
 #endif
 
                 // unsafe cast is ok as the handle cannot be destroyed and recycled while we keep the instance alive
+#if FEATURE_JAVAMARSHAL
+                target = Unsafe.As<T?>(GCHandle.InternalGetBridgeWait(th));
+#else
                 target = Unsafe.As<T?>(GCHandle.InternalGet(th));
+#endif
 
                 // must keep the instance alive as long as we use the handle.
                 GC.KeepAlive(this);
@@ -167,7 +170,7 @@ namespace System
 #pragma warning disable CA1821 // Remove empty Finalizers
         ~WeakReference()
         {
-            Debug.Assert(false, " WeakReference<T> finalizer should never run");
+            Debug.Fail(" WeakReference<T> finalizer should never run");
         }
 #pragma warning restore CA1821 // Remove empty Finalizers
 

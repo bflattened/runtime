@@ -18,8 +18,6 @@ for %%i in ("%__RepoRootDir%") do set "__RepoRootDir=%%~fi"
 if %__ProjectDir:~-1%==\ set "__ProjectDir=%__ProjectDir:~0,-1%"
 set "__ProjectFilesDir=%__ProjectDir%"
 set "__RootBinDir=%__RepoRootDir%\artifacts"
-set "__LogsDir=%__RootBinDir%\log"
-set "__MsbuildDebugLogsDir=%__LogsDir%\MsbuildDebugLogs"
 set __ToolsDir=%__ProjectDir%\..\Tools
 set "DotNetCli=%__RepoRootDir%\dotnet.cmd"
 
@@ -30,8 +28,10 @@ set __LongGCTests=
 set __GCSimulatorTests=
 set __IlasmRoundTrip=
 set __PrintLastResultsOnly=
+set LogsDirArg=
 set RunInUnloadableContext=
 set TieringTest=
+set RunInterpreter=
 
 :Arg_Loop
 if "%1" == "" goto ArgsDone
@@ -60,6 +60,7 @@ if /i "%1" == "jitminopts"                              (set DOTNET_JITMinOpts=1
 if /i "%1" == "jitforcerelocs"                          (set DOTNET_ForceRelocs=1&shift&goto Arg_Loop)
 
 if /i "%1" == "printlastresultsonly"                    (set __PrintLastResultsOnly=1&shift&goto Arg_Loop)
+if /i "%1" == "logsdir"                                 (set LogsDirArg=%2&shift&shift&goto Arg_Loop)
 if /i "%1" == "runcrossgen2tests"                       (set RunCrossGen2=1&shift&goto Arg_Loop)
 REM This test feature is currently intentionally undocumented
 if /i "%1" == "runlargeversionbubblecrossgen2tests"     (set RunCrossGen2=1&set CrossgenLargeVersionBubble=1&shift&goto Arg_Loop)
@@ -74,6 +75,7 @@ if /i "%1" == "timeout"                                 (set __TestTimeout=%2&sh
 if /i "%1" == "runincontext"                            (set RunInUnloadableContext=1&shift&goto Arg_Loop)
 if /i "%1" == "tieringtest"                             (set TieringTest=1&shift&goto Arg_Loop)
 if /i "%1" == "runnativeaottests"                       (set RunNativeAot=1&shift&goto Arg_Loop)
+if /i "%1" == "interpreter"                             (set RunInterpreter=1&shift&goto Arg_Loop)
 
 if /i not "%1" == "msbuildargs" goto SkipMsbuildArgs
 :: All the rest of the args will be collected and passed directly to msbuild.
@@ -108,6 +110,10 @@ if not defined XunitTestReportDirBase set  XunitTestReportDirBase=%XunitTestBinB
 REM Set up arguments to call run.py
 
 set __RuntestPyArgs=-arch %__BuildArch% -build_type %__BuildType%
+
+if defined LogsDirArg (
+    set __RuntestPyArgs=%__RuntestPyArgs% -logs_dir %LogsDirArg%
+)
 
 if defined DoLink (
     set __RuntestPyArgs=%__RuntestPyArgs% --il_link
@@ -163,6 +169,10 @@ if defined TieringTest (
 
 if defined RunNativeAot (
     set __RuntestPyArgs=%__RuntestPyArgs% --run_nativeaot_tests
+)
+
+if defined RunInterpreter (
+    set __RuntestPyArgs=%__RuntestPyArgs% --interpreter
 )
 
 REM Find python and set it to the variable PYTHON
@@ -226,8 +236,10 @@ echo printlastresultsonly      - Print the last test results without running tes
 echo runincontext              - Run each tests in an unloadable AssemblyLoadContext
 echo timeout ^<n^>               - Sets the per-test timeout in milliseconds ^(default is 10 minutes = 10 * 60 * 1000 = 600000^).
 echo                             Note: some options override this ^(gcstresslevel, longgc, gcsimulator^).
+echo logsdir ^<dir^>             - Specify the logs directory ^(default: artifacts/log^)
 echo msbuildargs ^<args...^>     - Pass all subsequent args directly to msbuild invocations.
 echo ^<CORE_ROOT^>               - Path to the runtime to test ^(if specified^).
+echo interpreter               - Runs the tests with the interpreter enabled.
 echo.
 echo Note that arguments are not case-sensitive.
 echo.

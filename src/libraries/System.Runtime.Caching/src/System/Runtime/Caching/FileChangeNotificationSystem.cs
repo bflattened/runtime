@@ -2,16 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Runtime.Caching.Hosting;
-using System.Runtime.Caching.Resources;
 using System.Collections;
 using System.IO;
-using System.Security;
+using System.Runtime.Caching.Hosting;
+using System.Runtime.Caching.Resources;
 using System.Runtime.Versioning;
+using System.Security;
 
 namespace System.Runtime.Caching
 {
-#if NETCOREAPP
+#if NET
     [UnsupportedOSPlatform("browser")]
     [UnsupportedOSPlatform("ios")]
     [UnsupportedOSPlatform("tvos")]
@@ -95,14 +95,8 @@ namespace System.Runtime.Caching
 
         void IFileChangeNotificationSystem.StartMonitoring(string filePath, OnChangedCallback onChangedCallback, out object state, out DateTimeOffset lastWriteTime, out long fileSize)
         {
-            if (filePath is null)
-            {
-                throw new ArgumentNullException(nameof(filePath));
-            }
-            if (onChangedCallback is null)
-            {
-                throw new ArgumentNullException(nameof(onChangedCallback));
-            }
+            ArgumentNullException.ThrowIfNull(filePath);
+            ArgumentNullException.ThrowIfNull(onChangedCallback);
 
             FileInfo fileInfo = new FileInfo(filePath);
             string dir = Path.GetDirectoryName(filePath);
@@ -146,14 +140,8 @@ namespace System.Runtime.Caching
 
         void IFileChangeNotificationSystem.StopMonitoring(string filePath, object state)
         {
-            if (filePath is null)
-            {
-                throw new ArgumentNullException(nameof(filePath));
-            }
-            if (state is null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
+            ArgumentNullException.ThrowIfNull(filePath);
+            ArgumentNullException.ThrowIfNull(state);
 
             FileChangeEventTarget target = state as FileChangeEventTarget;
             if (target == null)

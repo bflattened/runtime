@@ -62,6 +62,8 @@ struct InstructionAttribute
     }
 };
 
+#ifndef DACCESS_COMPILE
+
 /* ------------------------------------------------------------------------- *
  * Classes
  * ------------------------------------------------------------------------- */
@@ -77,7 +79,7 @@ public:
 
     virtual void Init(const BYTE *ip, REGDISPLAY *pregisters)
     {
-        PREFIX_ASSUME(pregisters != NULL);
+        _ASSERTE(pregisters != NULL);
         _ASSERTE(GetControlPC(pregisters) == (PCODE)ip);
 
         m_registers = pregisters;
@@ -232,6 +234,18 @@ public:
     static BOOL  DecodePCRelativeBranchInst(PT_CONTEXT context,const PRD_TYPE opcode, PCODE& offset, WALK_TYPE& walk);
     static BOOL  DecodeJumpInst(const PRD_TYPE opcode, int& RegNum, PCODE& offset, WALK_TYPE& walk);
 };
+#elif defined (TARGET_RISCV64)
+#include "controller.h"
+class NativeWalker : public Walker
+{
+public:
+    void Init(const BYTE *ip, REGDISPLAY *pregisters)
+    {
+        Walker::Init(ip, pregisters);
+    }
+    void Decode();
+    uint64_t GetReg(uint64_t reg);
+};
 #else
 PORTABILITY_WARNING("NativeWalker not implemented on this platform");
 class NativeWalker : public Walker
@@ -267,5 +281,7 @@ private:
     DWORD m_opcode;           // Current instruction or opcode
 };
 #endif
+
+#endif // DACCESS_COMPILE
 
 #endif // WALKER_H_

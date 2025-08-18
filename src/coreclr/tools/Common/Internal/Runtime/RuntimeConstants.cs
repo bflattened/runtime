@@ -33,6 +33,9 @@ namespace Internal.Runtime
     internal enum GC_ALLOC_FLAGS
     {
         GC_ALLOC_NO_FLAGS = 0,
+        GC_ALLOC_FINALIZE = 1,
+        GC_ALLOC_ALIGN8_BIAS = 4,
+        GC_ALLOC_ALIGN8 = 8,
         GC_ALLOC_ZEROING_OPTIONAL = 16,
         GC_ALLOC_PINNED_OBJECT_HEAP = 64,
     }
@@ -41,6 +44,11 @@ namespace Internal.Runtime
     {
         public const ushort Diamond = 0xFFFE;
         public const ushort Reabstraction = 0xFFFF;
+    }
+
+    internal static class DispatchMapCodePointerFlags
+    {
+        public const int RequiresInstantiatingThunkFlag = 2;
     }
 
     internal static class SpecialGVMInterfaceEntry
@@ -73,5 +81,8 @@ namespace Internal.Runtime
         public const int IsObjectiveCMessageSendMask = 0x8;
         public const int ObjectiveCMessageSendFunctionMask = 0x70;
         public const int ObjectiveCMessageSendFunctionShift = 4;
+        // Uses the same bit as IsObjectiveCMessageSendMask since we never have
+        // TARGET_X86 and FEATURE_OBJCMARSHAL used at the same time.
+        public const int IsStdcall = 0x8;
     }
 }

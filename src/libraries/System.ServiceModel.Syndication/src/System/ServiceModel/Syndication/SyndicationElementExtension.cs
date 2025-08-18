@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Diagnostics;
 
 namespace System.ServiceModel.Syndication
 {
@@ -21,10 +21,7 @@ namespace System.ServiceModel.Syndication
 
         public SyndicationElementExtension(XmlReader xmlReader)
         {
-            if (xmlReader is null)
-            {
-                throw new ArgumentNullException(nameof(xmlReader));
-            }
+            ArgumentNullException.ThrowIfNull(xmlReader);
 
             SyndicationFeedFormatter.MoveToStartElement(xmlReader);
             _outerName = xmlReader.LocalName;
@@ -57,10 +54,7 @@ namespace System.ServiceModel.Syndication
 
         public SyndicationElementExtension(string outerName, string outerNamespace, object dataContractExtension, XmlObjectSerializer dataContractSerializer)
         {
-            if (dataContractExtension is null)
-            {
-                throw new ArgumentNullException(nameof(dataContractExtension));
-            }
+            ArgumentNullException.ThrowIfNull(dataContractExtension);
 
             if (outerName == string.Empty)
             {
@@ -76,10 +70,7 @@ namespace System.ServiceModel.Syndication
 
         public SyndicationElementExtension(object xmlSerializerExtension, XmlSerializer serializer)
         {
-            if (xmlSerializerExtension is null)
-            {
-                throw new ArgumentNullException(nameof(xmlSerializerExtension));
-            }
+            ArgumentNullException.ThrowIfNull(xmlSerializerExtension);
 
             serializer ??= new XmlSerializer(xmlSerializerExtension.GetType());
             _extensionData = xmlSerializerExtension;
@@ -124,10 +115,7 @@ namespace System.ServiceModel.Syndication
 
         public TExtension GetObject<TExtension>(XmlObjectSerializer serializer)
         {
-            if (serializer is null)
-            {
-                throw new ArgumentNullException(nameof(serializer));
-            }
+            ArgumentNullException.ThrowIfNull(serializer);
 
             if (_extensionData != null && typeof(TExtension).IsAssignableFrom(_extensionData.GetType()))
             {
@@ -141,10 +129,7 @@ namespace System.ServiceModel.Syndication
 
         public TExtension GetObject<TExtension>(XmlSerializer serializer)
         {
-            if (serializer is null)
-            {
-                throw new ArgumentNullException(nameof(serializer));
-            }
+            ArgumentNullException.ThrowIfNull(serializer);
 
             if (_extensionData != null && typeof(TExtension).IsAssignableFrom(_extensionData.GetType()))
             {
@@ -176,10 +161,7 @@ namespace System.ServiceModel.Syndication
 
         public void WriteTo(XmlWriter writer)
         {
-            if (writer is null)
-            {
-                throw new ArgumentNullException(nameof(writer));
-            }
+            ArgumentNullException.ThrowIfNull(writer);
 
             if (_extensionDataWriter != null)
             {

@@ -2,25 +2,22 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-
+using System.Reflection;
+using System.Reflection.Runtime.BindingFlagSupport;
+using System.Reflection.Runtime.CustomAttributes;
 using System.Reflection.Runtime.FieldInfos;
 using System.Reflection.Runtime.General;
 using System.Reflection.Runtime.General.NativeFormat;
 using System.Reflection.Runtime.TypeInfos;
 using System.Reflection.Runtime.TypeInfos.NativeFormat;
-using System.Reflection.Runtime.CustomAttributes;
-using System.Reflection.Runtime.BindingFlagSupport;
+using System.Runtime.CompilerServices;
 
 using Internal.Metadata.NativeFormat;
-
 using Internal.Reflection.Core;
 using Internal.Reflection.Core.Execution;
-
 using Internal.Runtime.Augments;
 
 namespace System.Reflection.Runtime.FieldInfos.NativeFormat
@@ -89,7 +86,7 @@ namespace System.Reflection.Runtime.FieldInfos.NativeFormat
 
         public sealed override string ToString()
         {
-            return FieldRuntimeType.ToType().FormatTypeNameForReflection() + " " + this.Name;
+            return FieldRuntimeType.ToType().FormatTypeName() + " " + this.Name;
         }
 
         public sealed override bool HasSameMetadataDefinitionAs(MemberInfo other)
@@ -133,7 +130,7 @@ namespace System.Reflection.Runtime.FieldInfos.NativeFormat
             {
                 return RuntimeAugments.TypeLoaderCallbacks.GetRuntimeFieldHandleForComponents(
                     DeclaringType.TypeHandle,
-                    Name);
+                    _fieldHandle);
             }
         }
 

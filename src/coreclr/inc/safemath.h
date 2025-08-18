@@ -31,11 +31,11 @@
 
 #include "static_assert.h"
 
-#ifdef PAL_STDCPP_COMPAT
 #include <type_traits>
-#else
-#include "clr_std/type_traits"
-#endif
+
+#ifdef FEATURE_PAL
+#include "pal_mstypes.h"
+#endif // FEATURE_PAL
 
 //==================================================================
 // Semantics: if val can be represented as the exact same value
@@ -48,12 +48,6 @@
 // function are based on static type information and as such will
 // be optimized away. In particular, the case where the signs are
 // identical will result in no code branches.
-
-#ifdef _PREFAST_
-#pragma warning(push)
-#pragma warning(disable:6326) // PREfast warning: Potential comparison of a constant with another constant
-#endif // _PREFAST_
-
 template <typename Dst, typename Src>
 inline bool FitsIn(Src val)
 {
@@ -139,10 +133,6 @@ inline bool DoubleFitsInIntType(double val)
     double DstMaxD = static_cast<double>(DstMax);
     return DstMinD <= val && val <= DstMaxD;
 }
-
-#ifdef _PREFAST_
-#pragma warning(pop)
-#endif //_PREFAST_
 
 #define ovadd_lt(a, b, rhs) (((a) + (b) <  (rhs) ) && ((a) + (b) >= (a)))
 #define ovadd_le(a, b, rhs) (((a) + (b) <= (rhs) ) && ((a) + (b) >= (a)))
@@ -688,10 +678,6 @@ private:
     INDEBUG( mutable bool m_checkedOverflow; )
 };
 
-#if defined(_MSC_VER) && defined(HOST_ARM64) // Workaround for https://github.com/dotnet/runtime/issues/93442
-#pragma optimize("", off)
-#endif
-
 template <>
 inline bool ClrSafeInt<int64_t>::multiply(int64_t lhs, int64_t rhs, int64_t &result)
 {
@@ -877,10 +863,6 @@ inline bool ClrSafeInt<uint8_t>::multiply(uint8_t lhs, uint8_t rhs, uint8_t &res
     result = (uint8_t)tmp;
     return true;
 }
-
-#if defined(_MSC_VER) && defined(HOST_ARM64) // Workaround for https://github.com/dotnet/runtime/issues/93442
-#pragma optimize("", on)
-#endif
 
 // Allows creation of a ClrSafeInt corresponding to the type of the argument.
 template <typename T>

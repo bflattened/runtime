@@ -3,11 +3,11 @@
 
 using System.Data.Common;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
-using System.Diagnostics.CodeAnalysis;
 
 namespace System.Data.SqlTypes
 {
@@ -460,6 +460,11 @@ namespace System.Data.SqlTypes
             return new XmlQualifiedName("base64Binary", XmlSchema.Namespace);
         }
 
+        /// <summary>
+        /// Wraps a byte array in a <see cref="SqlBinary" /> without copying the data.
+        /// </summary>
+        /// <param name="bytes">The byte array to wrap.</param>
+        /// <returns>A <see cref="SqlBinary" /> that wraps the provided byte array.</returns>
         public static SqlBinary WrapBytes(byte[] bytes)
         {
             return new SqlBinary(bytes, copy: false);

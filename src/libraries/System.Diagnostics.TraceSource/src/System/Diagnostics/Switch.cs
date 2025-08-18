@@ -2,13 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Threading;
-using System.Runtime.InteropServices;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace System.Diagnostics
 {
@@ -25,25 +25,14 @@ namespace System.Diagnostics
         private bool _initializing;
         private volatile string? _switchValueString = string.Empty;
         private readonly string _defaultValue;
-        private object? _initializedLock;
 
         private static readonly List<WeakReference<Switch>> s_switches = new List<WeakReference<Switch>>();
         private static int s_LastCollectionCount;
         private StringDictionary? _attributes;
 
-        private object InitializedLock
-        {
-            get
-            {
-                if (_initializedLock == null)
-                {
-                    object o = new object();
-                    Interlocked.CompareExchange<object?>(ref _initializedLock, o, null);
-                }
+        private object InitializedLock =>
+            field ?? Interlocked.CompareExchange(ref field, new object(), null) ?? field;
 
-                return _initializedLock;
-            }
-        }
 
         /// <devdoc>
         /// <para>Initializes a new instance of the <see cref='System.Diagnostics.Switch'/>

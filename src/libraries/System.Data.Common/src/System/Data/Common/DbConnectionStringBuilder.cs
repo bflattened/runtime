@@ -6,19 +6,22 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
-using System.Diagnostics.CodeAnalysis;
 
 namespace System.Data.Common
 {
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2113:ReflectionToRequiresUnreferencedCode",
-        Justification = "The use of GetType preserves ICustomTypeDescriptor members with RequiresUnreferencedCode, but the GetType callsites either "
-            + "occur in RequiresUnreferencedCode scopes, or have individually justified suppressions.")]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2112:ReflectionToRequiresUnreferencedCode",
         Justification = "The use of GetType preserves implementation of ICustomTypeDescriptor members with RequiresUnreferencedCode, but the GetType callsites either "
             + "occur in RequiresUnreferencedCode scopes, or have individually justified suppressions.")]
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.AllConstructors |
+            DynamicallyAccessedMemberTypes.AllEvents |
+            DynamicallyAccessedMemberTypes.AllFields |
+            DynamicallyAccessedMemberTypes.AllMethods |
+            DynamicallyAccessedMemberTypes.AllNestedTypes |
+            DynamicallyAccessedMemberTypes.AllProperties |
+            DynamicallyAccessedMemberTypes.Interfaces)]
     public class DbConnectionStringBuilder : IDictionary, ICustomTypeDescriptor
     {
         // keyword->value currently listed in the connection string
@@ -608,7 +611,7 @@ namespace System.Data.Common
         {
             return TypeDescriptor.GetAttributes(this, true);
         }
-        [RequiresUnreferencedCode("Editors registered in TypeDescriptor.AddEditorTable may be trimmed.")]
+        [RequiresUnreferencedCode("Design-time attributes are not preserved when trimming. Types referenced by attributes like EditorAttribute and DesignerAttribute may not be available after trimming.")]
         object? ICustomTypeDescriptor.GetEditor(Type editorBaseType)
         {
             return TypeDescriptor.GetEditor(this, editorBaseType, true);

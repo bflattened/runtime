@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
-using System.ComponentModel.Design.Serialization;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace System.Management
@@ -1105,10 +1105,7 @@ namespace System.Management
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
 
-            if (destinationType == null)
-            {
-                throw new ArgumentNullException(nameof(destinationType));
-            }
+            ArgumentNullException.ThrowIfNull(destinationType);
 
             if (value is ManagementPath && destinationType == typeof(InstanceDescriptor))
             {

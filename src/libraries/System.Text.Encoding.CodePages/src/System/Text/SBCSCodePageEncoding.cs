@@ -3,13 +3,13 @@
 
 using System;
 using System.Buffers.Binary;
-using System.IO;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Security;
 using System.Text;
 using System.Threading;
-using System.Globalization;
-using System.Security;
-using System.Runtime.CompilerServices;
 
 namespace System.Text
 {
@@ -37,11 +37,11 @@ namespace System.Text
         {
             if (BitConverter.IsLittleEndian)
             {
-              return *(ushort*)pByte;
+                return *(ushort*)pByte;
             }
             else
             {
-              return BinaryPrimitives.ReverseEndianness(*(ushort*)pByte);
+                return BinaryPrimitives.ReverseEndianness(*(ushort*)pByte);
             }
         }
 
@@ -129,19 +129,8 @@ namespace System.Text
         }
 
         // Private object for locking instead of locking on a public type for SQL reliability work.
-        private static object? s_InternalSyncObject;
-        private static object InternalSyncObject
-        {
-            get
-            {
-                if (s_InternalSyncObject == null)
-                {
-                    object o = new object();
-                    Interlocked.CompareExchange<object?>(ref s_InternalSyncObject, o, null);
-                }
-                return s_InternalSyncObject;
-            }
-        }
+        private static object InternalSyncObject =>
+            field ?? Interlocked.CompareExchange(ref field, new object(), null) ?? field;
 
         // Read in our best fit table
         protected override unsafe void ReadBestFitTable()

@@ -11,12 +11,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.X509Certificates.Asn1;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 using Internal.Cryptography;
-
+using Microsoft.Win32.SafeHandles;
 using X509VerifyStatusCodeUniversal = Interop.Crypto.X509VerifyStatusCodeUniversal;
-
-#pragma warning disable 8500 // taking address of managed type
 
 namespace System.Security.Cryptography.X509Certificates
 {
@@ -1145,6 +1142,7 @@ namespace System.Security.Cryptography.X509Certificates
                 case X509VerifyStatusCodeUniversal.X509_V_ERR_EXCLUDED_VIOLATION:
                     return X509ChainStatusFlags.HasExcludedNameConstraint;
 
+                case X509VerifyStatusCodeUniversal.X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE:
                 case X509VerifyStatusCodeUniversal.X509_V_ERR_SUBTREE_MINMAX:
                     return X509ChainStatusFlags.HasNotSupportedNameConstraint;
 
@@ -1170,7 +1168,7 @@ namespace System.Security.Cryptography.X509Certificates
                     return X509ChainStatusFlags.InvalidBasicConstraints;
                 default:
                     Debug.Fail("Unrecognized X509VerifyStatusCode:" + code.Code30);
-                    throw new CryptographicException();
+                    throw GetUnmappedCodeException(nameof(MapOpenSsl30Code), (int)code.Code30);
             }
         }
 
@@ -1182,7 +1180,7 @@ namespace System.Security.Cryptography.X509Certificates
                     return X509ChainStatusFlags.InvalidBasicConstraints;
                 default:
                     Debug.Fail("Unrecognized X509VerifyStatusCode:" + code.Code102);
-                    throw new CryptographicException();
+                    throw GetUnmappedCodeException(nameof(MapOpenSsl102Code), (int)code.Code102);
             }
         }
 
@@ -1194,7 +1192,7 @@ namespace System.Security.Cryptography.X509Certificates
                     return X509ChainStatusFlags.InvalidBasicConstraints;
                 default:
                     Debug.Fail("Unrecognized X509VerifyStatusCode:" + code.Code111);
-                    throw new CryptographicException();
+                    throw GetUnmappedCodeException(nameof(MapOpenSsl111Code), (int)code.Code111);
             }
         }
 
@@ -1420,6 +1418,11 @@ namespace System.Security.Cryptography.X509Certificates
             }
 
             return MapOpenSsl102Code;
+        }
+
+        private static CryptographicException GetUnmappedCodeException(string functionName, int code)
+        {
+            return new CryptographicException(SR.Format(SR.Cryptography_UnmappedOpenSslCode, functionName, code));
         }
 
         private unsafe struct ErrorCollection

@@ -2,12 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
+using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Threading;
+
 using Internal.DeveloperExperience;
-using System.Runtime;
 
 namespace System
 {
@@ -54,7 +55,5 @@ namespace System
             AppContext.OnProcessExit();
 #endif
         }
-
-        public static int TickCount => (int)TickCount64;
     }
 }

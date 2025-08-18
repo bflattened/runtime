@@ -2,12 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace System.Diagnostics
 {
@@ -21,7 +21,6 @@ namespace System.Diagnostics
         private int _indentSize = 4;
         private TraceOptions _traceOptions = TraceOptions.None;
         private bool _needIndent = true;
-        private StringDictionary? _attributes;
 
         private string? _listenerName;
         private TraceFilter? _filter;
@@ -42,7 +41,7 @@ namespace System.Diagnostics
             _listenerName = name;
         }
 
-        public StringDictionary Attributes => _attributes ??= new StringDictionary();
+        public StringDictionary Attributes => field ??= new StringDictionary();
 
         /// <devdoc>
         /// <para> Gets or sets a name for this <see cref='System.Diagnostics.TraceListener'/>.</para>

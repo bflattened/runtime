@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Diagnostics.CodeAnalysis;
 
 namespace System.Net
 {
@@ -26,8 +26,6 @@ namespace System.Net
         private const int ApproxHighAvgNumHeaders = 16;
         private WebHeaderCollectionType _type;
         private NameValueCollection? _innerCollection;
-
-        private static HeaderInfoTable? _headerInfo;
 
         [Obsolete(Obsoletions.LegacyFormatterImplMessage, DiagnosticId = Obsoletions.LegacyFormatterImplDiagId, UrlFormat = Obsoletions.SharedUrlFormat)]
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -48,9 +46,9 @@ namespace System.Net
             }
         }
 
-        private static HeaderInfoTable HeaderInfo => _headerInfo ??= new HeaderInfoTable();
+        private static HeaderInfoTable HeaderInfo => field ??= new HeaderInfoTable();
 
-        private NameValueCollection InnerCollection => _innerCollection ??= new NameValueCollection(ApproxHighAvgNumHeaders, CaseInsensitiveAscii.StaticInstance);
+        private NameValueCollection InnerCollection => _innerCollection ??= new NameValueCollection(ApproxHighAvgNumHeaders, StringComparer.OrdinalIgnoreCase);
 
         private bool AllowHttpResponseHeader
         {

@@ -22,8 +22,6 @@ Abstract:
 SET_DEFAULT_DEBUG_CHANNEL(VIRTUAL); // some headers have code with asserts, so do this first
 
 #include "pal/thread.hpp"
-#include "pal/cs.hpp"
-#include "pal/malloc.hpp"
 #include "pal/file.hpp"
 #include "pal/seh.hpp"
 #include "pal/virtual.h"
@@ -31,13 +29,16 @@ SET_DEFAULT_DEBUG_CHANNEL(VIRTUAL); // some headers have code with asserts, so d
 #include "pal/init.h"
 #include "pal/utils.h"
 #include "common.h"
+#include <clrconfignocache.h>
 
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <dlfcn.h>
 
 #if HAVE_VM_ALLOCATE
 #include <mach/vm_map.h>
@@ -46,12 +47,17 @@ SET_DEFAULT_DEBUG_CHANNEL(VIRTUAL); // some headers have code with asserts, so d
 
 using namespace CorUnix;
 
-CRITICAL_SECTION virtual_critsec;
+minipal_mutex virtual_critsec;
 
 // The first node in our list of allocated blocks.
 static PCMI pVirtualMemory;
 
 static size_t s_virtualPageSize = 0;
+
+#if defined(HOST_APPLE) && defined(HOST_ARM64) && !defined(HOST_OSX)
+void (*jit_write_protect_np)(int enabled);
+#define pthread_jit_write_protect_np jit_write_protect_np
+#endif // defined(HOST_APPLE) && defined(HOST_ARM64) && !defined(HOST_OSX)
 
 /* We need MAP_ANON. However on some platforms like HP-UX, it is defined as MAP_ANONYMOUS */
 #if !defined(MAP_ANON) && defined(MAP_ANONYMOUS)
@@ -96,7 +102,6 @@ namespace VirtualMemoryLogging
         Commit = 0x30,
         Decommit = 0x40,
         Release = 0x50,
-        Reset = 0x60,
         ReserveFromExecutableMemoryAllocatorWithinRange = 0x70
     };
 
@@ -169,7 +174,7 @@ VIRTUALInitialize(bool initializeExecutableMemoryAllocator)
 
     TRACE("Initializing the Virtual Critical Sections. \n");
 
-    InternalInitializeCriticalSection(&virtual_critsec);
+    minipal_mutex_init(&virtual_critsec);
 
     pVirtualMemory = NULL;
 
@@ -177,6 +182,15 @@ VIRTUALInitialize(bool initializeExecutableMemoryAllocator)
     {
         g_executableMemoryAllocator.Initialize();
     }
+
+#if defined(HOST_APPLE) && defined(HOST_ARM64) && !defined(HOST_OSX)
+    jit_write_protect_np = (void (*)(int))dlsym(RTLD_DEFAULT, "pthread_jit_write_protect_np");
+    if (jit_write_protect_np == NULL)
+    {
+        ERROR("pthread_jit_write_protect_np not available.\n");
+        return FALSE;
+    }
+#endif // defined(HOST_APPLE) && defined(HOST_ARM64) && !defined(HOST_OSX)
 
     return TRUE;
 }
@@ -192,9 +206,7 @@ void VIRTUALCleanup()
 {
     PCMI pEntry;
     PCMI pTempEntry;
-    CPalThread * pthrCurrent = InternalGetCurrentThread();
-
-    InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     // Clean up the allocated memory.
     pEntry = pVirtualMemory;
@@ -208,10 +220,10 @@ void VIRTUALCleanup()
     }
     pVirtualMemory = NULL;
 
-    InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 
     TRACE( "Deleting the Virtual Critical Sections. \n" );
-    DeleteCriticalSection( &virtual_critsec );
+    minipal_mutex_destroy( &virtual_critsec );
 }
 
 /***
@@ -329,9 +341,7 @@ static void VIRTUALDisplayList( void  )
     PCMI p;
     SIZE_T count;
     SIZE_T index;
-    CPalThread * pthrCurrent = InternalGetCurrentThread();
-
-    InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     p = pVirtualMemory;
     count = 0;
@@ -350,7 +360,7 @@ static void VIRTUALDisplayList( void  )
         p = p->pNext;
     }
 
-    InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 }
 #endif
 
@@ -400,7 +410,7 @@ static BOOL VIRTUALStoreAllocationInfo(
         return FALSE;
     }
 
-    if (!(pNewEntry = (PCMI)InternalMalloc(sizeof(*pNewEntry))))
+    if (!(pNewEntry = (PCMI)malloc(sizeof(*pNewEntry))))
     {
         ERROR( "Unable to allocate memory for the structure.\n");
         return FALSE;
@@ -456,61 +466,6 @@ static BOOL VIRTUALStoreAllocationInfo(
 
 /******
  *
- *  VIRTUALResetMemory() - Helper function that resets the memory
- *
- *
- */
-static LPVOID VIRTUALResetMemory(
-                IN CPalThread *pthrCurrent, /* Currently executing thread */
-                IN LPVOID lpAddress,        /* Region to reserve or commit */
-                IN SIZE_T dwSize)           /* Size of Region */
-{
-    LPVOID pRetVal = NULL;
-    UINT_PTR StartBoundary;
-    SIZE_T MemSize;
-
-    TRACE( "Resetting the memory now..\n");
-
-    StartBoundary = (UINT_PTR) ALIGN_DOWN(lpAddress, GetVirtualPageSize());
-    MemSize = ALIGN_UP((UINT_PTR)lpAddress + dwSize, GetVirtualPageSize()) - StartBoundary;
-
-    int st;
-#if HAVE_MADV_FREE
-    // Try to use MADV_FREE if supported. It tells the kernel that the application doesn't
-    // need the pages in the range. Freeing the pages can be delayed until a memory pressure
-    // occurs.
-    st = madvise((LPVOID)StartBoundary, MemSize, MADV_FREE);
-    if (st != 0)
-#endif
-    {
-        // In case the MADV_FREE is not supported, use MADV_DONTNEED
-        st = posix_madvise((LPVOID)StartBoundary, MemSize, POSIX_MADV_DONTNEED);
-    }
-
-    if (st == 0)
-    {
-        pRetVal = lpAddress;
-
-#ifdef MADV_DONTDUMP
-        // Do not include reset memory in coredump.
-        madvise((LPVOID)StartBoundary, MemSize, MADV_DONTDUMP);
-#endif
-    }
-
-    LogVaOperation(
-        VirtualMemoryLogging::VirtualOperation::Reset,
-        lpAddress,
-        dwSize,
-        0,
-        0,
-        pRetVal,
-        pRetVal != NULL);
-
-    return pRetVal;
-}
-
-/******
- *
  *  VIRTUALReserveMemory() - Helper function that actually reserves the memory.
  *
  *      NOTE: I call SetLastError in here, because many different error states
@@ -522,13 +477,19 @@ static LPVOID VIRTUALReserveMemory(
                 IN LPVOID lpAddress,        /* Region to reserve or commit */
                 IN SIZE_T dwSize,           /* Size of Region */
                 IN DWORD flAllocationType,  /* Type of allocation */
-                IN DWORD flProtect)         /* Type of access protection */
+                IN DWORD flProtect,         /* Type of access protection */
+                OUT BOOL *newMemory = NULL) /* Set if new virtual memory is allocated */
 {
     LPVOID pRetVal      = NULL;
     UINT_PTR StartBoundary;
     SIZE_T MemSize;
 
     TRACE( "Reserving the memory now..\n");
+
+    if (newMemory != NULL)
+    {
+        *newMemory = false;
+    }
 
     // First, figure out where we're trying to reserve the memory and
     // how much we need. On most systems, requests to mmap must be
@@ -563,6 +524,11 @@ static LPVOID VIRTUALReserveMemory(
              flAllocationType |= MEM_RESERVE_EXECUTABLE;
         }
         pRetVal = ReserveVirtualMemory(pthrCurrent, (LPVOID)StartBoundary, MemSize, flAllocationType);
+
+        if (newMemory != NULL && pRetVal != NULL)
+        {
+            *newMemory = true;
+        }
     }
 
     if (pRetVal != NULL)
@@ -637,6 +603,10 @@ static LPVOID ReserveVirtualMemory(
     }
 #endif
 
+#ifdef __HAIKU__
+        mmapFlags |= MAP_NORESERVE;
+#endif
+
     LPVOID pRetVal = mmap((LPVOID) StartBoundary,
                           MemSize,
                           PROT_NONE,
@@ -671,9 +641,12 @@ static LPVOID ReserveVirtualMemory(
     }
 #endif  // MMAP_ANON_IGNORES_PROTECTION
 
-#ifdef MADV_DONTDUMP
-    // Do not include reserved memory in coredump.
-    madvise(pRetVal, MemSize, MADV_DONTDUMP);
+#if defined(MADV_DONTDUMP) && !defined(TARGET_WASM)
+    // Do not include reserved uncommitted memory in coredump.
+    if (!(fAllocationType & MEM_COMMIT))
+    {
+        madvise(pRetVal, MemSize, MADV_DONTDUMP);
+    }
 #endif
 
     return pRetVal;
@@ -700,6 +673,7 @@ VIRTUALCommitMemory(
     PCMI pInformation           = 0;
     LPVOID pRetVal              = NULL;
     BOOL IsLocallyReserved      = FALSE;
+    BOOL IsNewMemory            = FALSE;
     INT nProtect;
 
     if ( lpAddress )
@@ -722,7 +696,7 @@ VIRTUALCommitMemory(
         */
         LPVOID pReservedMemory =
                 VIRTUALReserveMemory( pthrCurrent, lpAddress, dwSize,
-                                      flAllocationType, flProtect );
+                                      flAllocationType, flProtect, &IsNewMemory );
 
         TRACE( "Reserve and commit the memory!\n " );
 
@@ -756,22 +730,29 @@ VIRTUALCommitMemory(
 
     nProtect = W32toUnixAccessControl(flProtect);
 
+#ifndef TARGET_WASM
     // Commit the pages
     if (mprotect((void *) StartBoundary, MemSize, nProtect) != 0)
     {
         ERROR("mprotect() failed! Error(%d)=%s\n", errno, strerror(errno));
         goto error;
     }
+#endif
 
-#ifdef MADV_DODUMP
-    // Include committed memory in coredump.
-    madvise((void *) StartBoundary, MemSize, MADV_DODUMP);
+#if defined(MADV_DONTDUMP) && !defined(TARGET_WASM)
+    // Include committed memory in coredump. Any newly allocated memory included by default.
+    if (!IsNewMemory)
+    {
+        madvise((void *) StartBoundary, MemSize, MADV_DODUMP);
+    }
 #endif
 
     pRetVal = (void *) StartBoundary;
     goto done;
 
+#ifndef TARGET_WASM
 error:
+#endif
     if ( flAllocationType & MEM_RESERVE || IsLocallyReserved )
     {
         munmap( pRetVal, MemSize );
@@ -835,8 +816,7 @@ PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange(
     // ExecutableMemoryAllocator::AllocateMemory() for the reason why it is done
     SIZE_T reservationSize = ALIGN_UP(dwSize, VIRTUAL_64KB);
 
-    CPalThread *currentThread = InternalGetCurrentThread();
-    InternalEnterCriticalSection(currentThread, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     void *address = g_executableMemoryAllocator.AllocateMemoryWithinRange(lpBeginAddress, lpEndAddress, reservationSize);
     if (address != nullptr)
@@ -859,7 +839,7 @@ PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange(
         address,
         TRUE);
 
-    InternalLeaveCriticalSection(currentThread, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 
     LOGEXIT("PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange returning %p\n", address);
     PERF_EXIT(PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange);
@@ -926,7 +906,7 @@ VirtualAlloc(
     }
 
     /* Test for un-supported flags. */
-    if ( ( flAllocationType & ~( MEM_COMMIT | MEM_RESERVE | MEM_RESET | MEM_TOP_DOWN | MEM_RESERVE_EXECUTABLE | MEM_LARGE_PAGES ) ) != 0 )
+    if ( ( flAllocationType & ~( MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN | MEM_RESERVE_EXECUTABLE | MEM_LARGE_PAGES ) ) != 0 )
     {
         ASSERT( "flAllocationType can be one, or any combination of MEM_COMMIT, \
                MEM_RESERVE, MEM_TOP_DOWN, MEM_RESERVE_EXECUTABLE, or MEM_LARGE_PAGES.\n" );
@@ -955,31 +935,11 @@ VirtualAlloc(
         NULL,
         TRUE);
 
-    if ( flAllocationType & MEM_RESET )
-    {
-        if ( flAllocationType != MEM_RESET )
-        {
-            ASSERT( "MEM_RESET cannot be used with any other allocation flags in flAllocationType.\n" );
-            pthrCurrent->SetLastError( ERROR_INVALID_PARAMETER );
-            goto done;
-        }
-
-        InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
-        pRetVal = VIRTUALResetMemory( pthrCurrent, lpAddress, dwSize );
-        InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
-
-        if ( !pRetVal )
-        {
-            /* Error messages are already displayed, just leave. */
-            goto done;
-        }
-    }
-
     if ( flAllocationType & MEM_RESERVE )
     {
-        InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+        minipal_mutex_enter(&virtual_critsec);
         pRetVal = VIRTUALReserveMemory( pthrCurrent, lpAddress, dwSize, flAllocationType, flProtect );
-        InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+        minipal_mutex_leave(&virtual_critsec);
 
         if ( !pRetVal )
         {
@@ -990,7 +950,7 @@ VirtualAlloc(
 
     if ( flAllocationType & MEM_COMMIT )
     {
-        InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+        minipal_mutex_enter(&virtual_critsec);
         if ( pRetVal != NULL )
         {
             /* We are reserving and committing. */
@@ -1003,7 +963,7 @@ VirtualAlloc(
             pRetVal = VIRTUALCommitMemory( pthrCurrent, lpAddress, dwSize,
                                     flAllocationType, flProtect );
         }
-        InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+        minipal_mutex_leave(&virtual_critsec);
     }
 
 done:
@@ -1036,7 +996,7 @@ VirtualFree(
           lpAddress, dwSize, dwFreeType);
 
     pthrCurrent = InternalGetCurrentThread();
-    InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     /* Sanity Checks. */
     if ( !lpAddress )
@@ -1094,9 +1054,12 @@ VirtualFree(
             goto VirtualFreeExit;
         }
 
-        TRACE( "Un-committing the following page(s) %d to %d.\n",
-               StartBoundary, MemSize );
+        TRACE( "Un-committing the following page(s) %p to %p.\n",
+               StartBoundary, StartBoundary + MemSize );
 
+        // mmap support on emscripten/wasm is very limited and doesn't support location hints
+        // (when address is not null)
+#ifndef TARGET_WASM
         // Explicitly calling mmap instead of mprotect here makes it
         // that much more clear to the operating system that we no
         // longer need these pages.
@@ -1114,7 +1077,7 @@ VirtualFree(
             }
 #endif  // MMAP_ANON_IGNORES_PROTECTION
 
-#ifdef MADV_DONTDUMP
+#if defined(MADV_DONTDUMP) && !defined(TARGET_WASM)
             // Do not include freed memory in coredump.
             madvise((LPVOID) StartBoundary, MemSize, MADV_DONTDUMP);
 #endif
@@ -1127,6 +1090,13 @@ VirtualFree(
             pthrCurrent->SetLastError( ERROR_INTERNAL_ERROR );
             goto VirtualFreeExit;
         }
+#else // TARGET_WASM
+        // We can't decommit the mapping (MAP_FIXED doesn't work in emscripten), and we can't
+        //  MADV_DONTNEED it (madvise doesn't work in emscripten), but we can at least zero
+        //  the memory so that if an attempt is made to reuse it later, the memory will be
+        //  empty as PAL tests expect it to be.
+        ZeroMemory((LPVOID) StartBoundary, MemSize);
+#endif // TARGET_WASM
     }
 
     if ( dwFreeType & MEM_RELEASE )
@@ -1185,7 +1155,7 @@ VirtualFreeExit:
         NULL,
         bRetVal);
 
-    InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
     LOGEXIT( "VirtualFree returning %s.\n", bRetVal == TRUE ? "TRUE" : "FALSE" );
     PERF_EXIT(VirtualFree);
     return bRetVal;
@@ -1213,15 +1183,13 @@ VirtualProtect(
     SIZE_T   Index = 0;
     SIZE_T   NumberOfPagesToChange = 0;
     SIZE_T   OffSet = 0;
-    CPalThread * pthrCurrent;
 
     PERF_ENTRY(VirtualProtect);
     ENTRY("VirtualProtect(lpAddress=%p, dwSize=%u, flNewProtect=%#x, "
           "flOldProtect=%p)\n",
           lpAddress, dwSize, flNewProtect, lpflOldProtect);
 
-    pthrCurrent = InternalGetCurrentThread();
-    InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     StartBoundary = (UINT_PTR) ALIGN_DOWN(lpAddress, GetVirtualPageSize());
     MemSize = ALIGN_UP((UINT_PTR)lpAddress + dwSize, GetVirtualPageSize()) - StartBoundary;
@@ -1243,9 +1211,11 @@ VirtualProtect(
     }
 
     pEntry = VIRTUALFindRegionInformation( StartBoundary );
+#ifndef TARGET_WASM
     if ( 0 == mprotect( (LPVOID)StartBoundary, MemSize,
                    W32toUnixAccessControl( flNewProtect ) ) )
     {
+#endif // !TARGET_WASM
         /* Reset the access protection. */
         TRACE( "Number of pages to change %d, starting page %d \n",
                NumberOfPagesToChange, OffSet );
@@ -1256,13 +1226,14 @@ VirtualProtect(
          */
         *lpflOldProtect = PAGE_EXECUTE_READWRITE;
 
-#ifdef MADV_DONTDUMP
+#if defined(MADV_DONTDUMP) && !defined(TARGET_WASM)
         // Include or exclude memory from coredump based on the protection.
         int advise = flNewProtect == PAGE_NOACCESS ? MADV_DONTDUMP : MADV_DODUMP;
         madvise((LPVOID)StartBoundary, MemSize, advise);
 #endif
 
         bRetVal = TRUE;
+#ifndef TARGET_WASM
     }
     else
     {
@@ -1276,8 +1247,9 @@ VirtualProtect(
             SetLastError( ERROR_INVALID_ACCESS );
         }
     }
+#endif // !TARGET_WASM
 ExitVirtualProtect:
-    InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 
 #if defined _DEBUG
     VIRTUALDisplayList();
@@ -1287,7 +1259,7 @@ ExitVirtualProtect:
     return bRetVal;
 }
 
-#if defined(HOST_OSX) && defined(HOST_ARM64)
+#if defined(HOST_APPLE) && defined(HOST_ARM64)
 PALAPI VOID PAL_JitWriteProtect(bool writeEnable)
 {
     thread_local int enabledCount = 0;
@@ -1307,7 +1279,7 @@ PALAPI VOID PAL_JitWriteProtect(bool writeEnable)
         _ASSERTE(enabledCount >= 0);
     }
 }
-#endif // HOST_OSX && HOST_ARM64
+#endif // HOST_APPLE && HOST_ARM64
 
 #if HAVE_VM_ALLOCATE
 //---------------------------------------------------------------------------------------
@@ -1472,7 +1444,7 @@ VirtualQuery(
           lpAddress, lpBuffer, dwLength);
 
     pthrCurrent = InternalGetCurrentThread();
-    InternalEnterCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
 
     if ( !lpBuffer)
     {
@@ -1553,7 +1525,7 @@ VirtualQuery(
 
 ExitVirtualQuery:
 
-    InternalLeaveCriticalSection(pthrCurrent, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 
     LOGEXIT( "VirtualQuery returning %d.\n", sizeof( *lpBuffer ) );
     PERF_EXIT(VirtualQuery);
@@ -1577,9 +1549,9 @@ Function :
 void* ReserveMemoryFromExecutableAllocator(CPalThread* pThread, SIZE_T allocationSize)
 {
 #ifdef HOST_64BIT
-    InternalEnterCriticalSection(pThread, &virtual_critsec);
+    minipal_mutex_enter(&virtual_critsec);
     void* mem = g_executableMemoryAllocator.AllocateMemory(allocationSize);
-    InternalLeaveCriticalSection(pThread, &virtual_critsec);
+    minipal_mutex_leave(&virtual_critsec);
 
     return mem;
 #else // !HOST_64BIT
@@ -1617,11 +1589,33 @@ Function:
 void ExecutableMemoryAllocator::TryReserveInitialMemory()
 {
     CPalThread* pthrCurrent = InternalGetCurrentThread();
-    int32_t sizeOfAllocation = MaxExecutableMemorySizeNearCoreClr;
     int32_t preferredStartAddressIncrement;
     UINT_PTR preferredStartAddress;
     UINT_PTR coreclrLoadAddress;
 
+    int32_t sizeOfAllocation = MaxExecutableMemorySizeNearCoreClr;
+    int32_t initialReserveLimit = -1;
+    rlimit addressSpaceLimit;
+    if ((getrlimit(RLIMIT_AS, &addressSpaceLimit) == 0) && (addressSpaceLimit.rlim_cur != RLIM_INFINITY))
+    {
+        // By default reserve max 20% of the available virtual address space
+        rlim_t initialExecMemoryPerc = 20;
+        CLRConfigNoCache defInitialExecMemoryPerc = CLRConfigNoCache::Get("InitialExecMemoryPercent", /*noprefix*/ false, &getenv);
+        if (defInitialExecMemoryPerc.IsSet())
+        {
+            DWORD perc;
+            if (defInitialExecMemoryPerc.TryAsInteger(16, perc))
+            {
+                initialExecMemoryPerc = perc;
+            }
+        }
+
+        initialReserveLimit = addressSpaceLimit.rlim_cur * initialExecMemoryPerc / 100;
+        if (initialReserveLimit < sizeOfAllocation)
+        {
+            sizeOfAllocation = initialReserveLimit;
+        }
+    }
 #if defined(TARGET_ARM) || defined(TARGET_ARM64)
     // Smaller steps on ARM because we try hard finding a spare memory in a 128Mb
     // distance from coreclr so e.g. all calls from corelib to coreclr could use relocs
@@ -1697,7 +1691,7 @@ void ExecutableMemoryAllocator::TryReserveInitialMemory()
         //     does not exceed approximately 2 GB.
         //   - The code heap allocator for the JIT can allocate from this address space. Beyond this reservation, one can use
         //     the DOTNET_CodeHeapReserveForJumpStubs environment variable to reserve space for jump stubs.
-        sizeOfAllocation = MaxExecutableMemorySize;
+        sizeOfAllocation = (initialReserveLimit != -1) ? initialReserveLimit : MaxExecutableMemorySize;
         m_startAddress = ReserveVirtualMemory(pthrCurrent, nullptr, sizeOfAllocation, MEM_RESERVE_EXECUTABLE);
         if (m_startAddress == nullptr)
         {

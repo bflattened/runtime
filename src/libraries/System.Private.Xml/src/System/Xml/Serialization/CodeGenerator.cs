@@ -13,10 +13,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Resources;
 using System.Runtime.CompilerServices;
-using System.Xml;
-using System.Xml.Serialization.Configuration;
 using System.Security;
 using System.Text.RegularExpressions;
+using System.Xml;
+using System.Xml.Serialization.Configuration;
 
 namespace System.Xml.Serialization
 {
@@ -429,6 +429,7 @@ namespace System.Xml.Serialization
             _ilGen!.Emit(OpCodes.Newarr, elementType);
         }
 
+        [RequiresDynamicCode(XmlSerializer.AotSerializationWarning)]
         internal void StackallocSpan(Type elementType, int len)
         {
             Ldc(len);
@@ -1246,6 +1247,7 @@ namespace System.Xml.Serialization
             return ifState;
         }
 
+        [RequiresDynamicCode(XmlSerializer.AotSerializationWarning)]
         internal static AssemblyBuilder CreateAssemblyBuilder(string name)
         {
             AssemblyName assemblyName = new AssemblyName();

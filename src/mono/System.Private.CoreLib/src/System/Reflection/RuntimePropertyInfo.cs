@@ -27,8 +27,8 @@
 //
 
 using System.Collections.Generic;
-using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -135,6 +135,8 @@ namespace System.Reflection
         {
             return GetDeclaringTypeInternal().GetRuntimeModule();
         }
+
+        public override bool IsCollectible => false;
 
         #region Object Overrides
         public override string ToString()

@@ -30,6 +30,8 @@
              Link="System\Text\RuneTests.TestData.cs" />
     <Compile Include="..\System\Text\StringBuilderTests.cs"
              Link="System\Text\StringBuilderTests.cs" />
+    <Compile Include="..\System\Text\StringBuilderReplaceTests.cs"
+             Link="System\Text\StringBuilderReplaceTests.cs" />
     <Compile Include="..\System\Uri.CreateStringTests.cs"
              Link="System\Uri.CreateStringTests.cs" />
     <Compile Include="..\System\Uri.CreateUriTests.cs"
@@ -38,6 +40,8 @@
              Link="System\Uri.MethodsTests.cs" />
     <Compile Include="$(CommonTestPath)System\EnumTypes.cs"
              Link="Common\System\EnumTypes.cs" />
+    <Compile Include="$(CommonTestPath)System\GenericMathHelpers.cs"
+             Link="Common\System\GenericMathHelpers.cs" />
     <Compile Include="$(CommonTestPath)System\MockType.cs"
              Link="Common\System\MockType.cs" />
     <Compile Include="$(CommonTestPath)Tests\System\StringTests.cs"

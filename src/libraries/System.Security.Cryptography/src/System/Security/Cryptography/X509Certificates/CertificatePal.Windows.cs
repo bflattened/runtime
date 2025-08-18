@@ -1,15 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Internal.Cryptography;
 using Microsoft.Win32.SafeHandles;
-
-using SafeX509ChainHandle = Microsoft.Win32.SafeHandles.SafeX509ChainHandle;
 using SafePasswordHandle = Microsoft.Win32.SafeHandles.SafePasswordHandle;
+using SafeX509ChainHandle = Microsoft.Win32.SafeHandles.SafeX509ChainHandle;
 
 namespace System.Security.Cryptography.X509Certificates
 {
@@ -88,7 +87,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        public byte[] KeyAlgorithmParameters
+        public byte[]? KeyAlgorithmParameters
         {
             get
             {
@@ -108,7 +107,7 @@ namespace System.Security.Cryptography.X509Certificates
                         {
                             byte* NULL_ASN_TAG = (byte*)0x5;
 
-                            byte[] keyAlgorithmParameters;
+                            byte[]? keyAlgorithmParameters;
 
                             if (algId == AlgId.CALG_DSS_SIGN
                                 && pCertContext->pCertInfo->SubjectPublicKeyInfo.Algorithm.Parameters.cbData == 0
@@ -122,7 +121,16 @@ namespace System.Security.Cryptography.X509Certificates
                             }
                             else
                             {
-                                keyAlgorithmParameters = pCertContext->pCertInfo->SubjectPublicKeyInfo.Algorithm.Parameters.ToByteArray();
+                                Interop.Crypt32.DATA_BLOB parametersBlob = pCertContext->pCertInfo->SubjectPublicKeyInfo.Algorithm.Parameters;
+
+                                if (parametersBlob.pbData == IntPtr.Zero)
+                                {
+                                    keyAlgorithmParameters = null;
+                                }
+                                else
+                                {
+                                    keyAlgorithmParameters = parametersBlob.ToByteArray();
+                                }
                             }
 
                             return keyAlgorithmParameters;
@@ -386,7 +394,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        public unsafe string GetNameInfo(X509NameType nameType, bool forIssuer) =>
+        public string GetNameInfo(X509NameType nameType, bool forIssuer) =>
             Interop.crypt32.CertGetNameString(
                 _certContext,
                 MapNameType(nameType),
@@ -410,7 +418,7 @@ namespace System.Security.Cryptography.X509Certificates
             CspKeyContainerInfo? cspKeyContainerInfo = null;
             try
             {
-                CspParameters? parameters = GetPrivateKeyCsp();
+                CspParameters? parameters = CertificateHelpers.GetPrivateKeyCsp(_certContext);
 
                 if (parameters != null)
                 {
@@ -507,7 +515,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        private unsafe string GetIssuerOrSubject(bool issuer, bool reverse) =>
+        private string GetIssuerOrSubject(bool issuer, bool reverse) =>
             Interop.crypt32.CertGetNameString(
                 _certContext,
                 Interop.Crypt32.CertNameType.CERT_NAME_RDN_TYPE,
@@ -521,7 +529,7 @@ namespace System.Security.Cryptography.X509Certificates
             _certContext = new SafeCertContextHandle(copyFrom._certContext);
         }
 
-        private CertificatePal(SafeCertContextHandle certContext, bool deleteKeyContainer)
+        internal CertificatePal(SafeCertContextHandle certContext, bool deleteKeyContainer)
         {
             if (deleteKeyContainer)
             {
@@ -542,6 +550,22 @@ namespace System.Security.Cryptography.X509Certificates
                 byte[]? exported = storePal.Export(contentType, password);
                 Debug.Assert(exported != null);
                 return exported;
+            }
+        }
+
+        public byte[] ExportPkcs12(Pkcs12ExportPbeParameters exportParameters, SafePasswordHandle password)
+        {
+            using (IExportPal storePal = StorePal.FromCertificate(this))
+            {
+                return storePal.ExportPkcs12(exportParameters, password);
+            }
+        }
+
+        public byte[] ExportPkcs12(PbeParameters exportParameters, SafePasswordHandle password)
+        {
+            using (IExportPal storePal = StorePal.FromCertificate(this))
+            {
+                return storePal.ExportPkcs12(exportParameters, password);
             }
         }
 

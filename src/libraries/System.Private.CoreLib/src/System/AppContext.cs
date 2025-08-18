@@ -82,14 +82,51 @@ namespace System
         internal static event EventHandler<FirstChanceExceptionEventArgs>? FirstChanceException;
 #pragma warning restore CS0067
 
-#if !NATIVEAOT
-        internal static void OnFirstChanceException(object e)
-        {
-            FirstChanceException?.Invoke(AppDomain.CurrentDomain, new FirstChanceExceptionEventArgs((Exception)e));
-        }
-#endif
+        private static ulong s_crashingThreadId;
 
-        internal static event EventHandler? ProcessExit;
+#if NATIVEAOT
+        [System.Runtime.RuntimeExport("OnUnhandledException")]
+#endif
+        internal static void OnUnhandledException(object e)
+        {
+            ulong currentThreadId = Thread.CurrentOSThreadId;
+            ulong previousCrashingThreadId = Interlocked.CompareExchange(ref s_crashingThreadId, currentThreadId, 0);
+            if (previousCrashingThreadId == 0)
+            {
+#if NATIVEAOT
+                RuntimeExceptionHelpers.SerializeCrashInfo(System.Runtime.RhFailFastReason.UnhandledException, (e as Exception)?.Message, e as Exception);
+#endif
+                if (UnhandledException is UnhandledExceptionEventHandler handlers)
+                {
+                    UnhandledExceptionEventArgs args = new(e, isTerminating: true);
+                    foreach (UnhandledExceptionEventHandler handler in Delegate.EnumerateInvocationList(handlers))
+                    {
+                        try
+                        {
+                            handler(/* AppDomain */ null!, args);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (s_crashingThreadId == previousCrashingThreadId)
+                {
+                    Environment.FailFast("OnUnhandledException called recursively");
+                }
+
+                // If we are already in the process of handling an unhandled
+                // exception, we do not want to raise the event again. We wait
+                // here while the other thread raises the unhandled exception.
+                // Waiting is important because it is possible upon returning, this thread
+                // could call some rude abort method that would terminate the process
+                // before the other thread finishes raising the unhandled exception.
+                Thread.Sleep(-1);
+            }
+        }
 
         internal static void OnProcessExit()
         {
@@ -98,8 +135,7 @@ namespace System
             {
                 EventListener.DisposeOnShutdown();
             }
-
-            ProcessExit?.Invoke(AppDomain.CurrentDomain, EventArgs.Empty);
+            AppDomain.OnProcessExit();
         }
 
         /// <summary>
@@ -151,7 +187,17 @@ namespace System
             }
         }
 
-#if !NATIVEAOT
+#if MONO
+        internal static unsafe void Setup(char** pNames, uint* pNameLengths, char** pValues, uint* pValueLengths, int count)
+        {
+            Debug.Assert(s_dataStore == null, "s_dataStore is not expected to be inited before Setup is called");
+            s_dataStore = new Dictionary<string, object?>(count);
+            for (int i = 0; i < count; i++)
+            {
+                s_dataStore.Add(new string(pNames[i], 0, (int)pNameLengths[i]), new string(pValues[i], 0, (int)pValueLengths[i]));
+            }
+        }
+#elif !NATIVEAOT
         internal static unsafe void Setup(char** pNames, char** pValues, int count)
         {
             Debug.Assert(s_dataStore == null, "s_dataStore is not expected to be inited before Setup is called");

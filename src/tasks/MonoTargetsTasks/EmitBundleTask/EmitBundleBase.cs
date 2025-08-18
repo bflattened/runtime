@@ -63,6 +63,10 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
     [Output]
     public ITaskItem[] BundledResources { get; set; } = default!;
 
+    // Set only if @BundleFile was set
+    [Output]
+    public string? BundleRegistrationFile { get; set; }
+
     public override bool Execute()
     {
         if (!Directory.Exists(OutputDirectory))
@@ -150,34 +154,50 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
 
         // Generate source file(s) containing each resource's byte data and size
         int allowedParallelism = Math.Max(Math.Min(bundledResources.Count, Environment.ProcessorCount), 1);
-        if (BuildEngine is IBuildEngine9 be9)
-            allowedParallelism = be9.RequestCores(allowedParallelism);
-
-        Parallel.For(0, remainingDestinationFilesToBundle.Length, new ParallelOptions { MaxDegreeOfParallelism = allowedParallelism, CancellationToken = BuildTaskCancelled.Token }, (i, state) =>
+        IBuildEngine9? be9 = BuildEngine as IBuildEngine9;
+        try
         {
-            var group = remainingDestinationFilesToBundle[i];
+            if (be9 is not null)
+                allowedParallelism = be9.RequestCores(allowedParallelism);
+        }
+        catch (NotImplementedException)
+        {
+            // RequestCores is not implemented in TaskHostFactory
+            be9 = null;
+        }
 
-            var contentSourceFile = group.First();
-
-            var inputFile = contentSourceFile.ItemSpec;
-            var destinationFile = contentSourceFile.GetMetadata("DestinationFile");
-            var registeredName = contentSourceFile.GetMetadata(RegisteredName);
-
-            var count = Interlocked.Increment(ref verboseCount);
-            Log.LogMessage(MessageImportance.Low, "{0}/{1} Bundling {2} ...", count, remainingDestinationFilesToBundle.Length, registeredName);
-
-            Log.LogMessage(MessageImportance.Low, "Bundling {0} into {1}", inputFile, destinationFile);
-            var symbolName = _resourceDataSymbolDictionary[registeredName];
-            if (!EmitBundleFile(destinationFile, (codeStream) =>
+        try
+        {
+            Parallel.For(0, remainingDestinationFilesToBundle.Length, new ParallelOptions { MaxDegreeOfParallelism = allowedParallelism, CancellationToken = BuildTaskCancelled.Token }, (i, state) =>
             {
-                using var inputStream = File.OpenRead(inputFile);
-                using var outputUtf8Writer = new StreamWriter(codeStream, Utf8NoBom);
-                BundleFileToCSource(symbolName, inputStream, outputUtf8Writer);
-            }))
-            {
-                state.Stop();
-            }
-        });
+                var group = remainingDestinationFilesToBundle[i];
+
+                var contentSourceFile = group.First();
+
+                var inputFile = contentSourceFile.ItemSpec;
+                var destinationFile = contentSourceFile.GetMetadata("DestinationFile");
+                var registeredName = contentSourceFile.GetMetadata(RegisteredName);
+
+                var count = Interlocked.Increment(ref verboseCount);
+                Log.LogMessage(MessageImportance.Low, "{0}/{1} Bundling {2} ...", count, remainingDestinationFilesToBundle.Length, registeredName);
+
+                Log.LogMessage(MessageImportance.Low, "Bundling {0} into {1}", inputFile, destinationFile);
+                var symbolName = _resourceDataSymbolDictionary[registeredName];
+                if (!EmitBundleFile(destinationFile, (codeStream) =>
+                {
+                    using var inputStream = File.OpenRead(inputFile);
+                    using var outputUtf8Writer = new StreamWriter(codeStream, Utf8NoBom);
+                    BundleFileToCSource(symbolName, inputStream, outputUtf8Writer);
+                }))
+                {
+                    state.Stop();
+                }
+            });
+        }
+        finally
+        {
+            be9?.ReleaseCores(allowedParallelism);
+        }
 
         foreach (ITaskItem bundledResource in bundledResources)
         {
@@ -187,8 +207,6 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
             bundledResource.SetMetadata("DataLenSymbol", $"{resourceDataSymbol}_data_len");
             bundledResource.SetMetadata("DataLenSymbolValue", symbolDataLen[resourceDataSymbol].ToString());
         }
-
-        BundledResources = bundledResources.ToArray();
 
         if (!string.IsNullOrEmpty(BundleFile))
         {
@@ -211,13 +229,19 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
 
             Log.LogMessage(MessageImportance.Low, $"Bundling {files.Count} files for {BundleRegistrationFunctionName}");
 
+            string bundleFilePath = Path.Combine(OutputDirectory, BundleFile);
+
             // Generate source file to preallocate resources and register bundled resources
-            EmitBundleFile(Path.Combine(OutputDirectory, BundleFile), (outputStream) =>
+            EmitBundleFile(bundleFilePath, (outputStream) =>
             {
                 using var outputUtf8Writer = new StreamWriter(outputStream, Utf8NoBom);
                 GenerateBundledResourcePreallocationAndRegistration(resourceSymbols, BundleRegistrationFunctionName, files, outputUtf8Writer);
             });
+
+            BundleRegistrationFile = bundleFilePath;
         }
+
+        BundledResources = bundledResources.ToArray();
 
         return !Log.HasLoggedErrors;
     }
@@ -265,8 +289,8 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
 
     private string GatherUniqueExportedResourceDataSymbols(List<ITaskItem> uniqueDestinationFiles)
     {
-        StringBuilder resourceSymbols = new ();
-        HashSet<string> resourcesAdded = new (); // Different Timezone resources may have the same contents
+        StringBuilder resourceSymbols = new();
+        HashSet<string> resourcesAdded = new(); // Different Timezone resources may have the same contents
         foreach (var uniqueDestinationFile in uniqueDestinationFiles)
         {
             string registeredName = uniqueDestinationFile.GetMetadata(RegisteredName);
@@ -284,16 +308,16 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
 
     private static void GenerateBundledResourcePreallocationAndRegistration(string resourceSymbols, string bundleRegistrationFunctionName, ICollection<(string resourceType, string registeredName, string resourceName, string resourceDataSymbol, string culture, string? resourceSymbolName)> files, StreamWriter outputUtf8Writer)
     {
-        List<string> preallocatedSource = new ();
+        List<string> preallocatedSource = new();
 
         string assemblyTemplate = Utils.GetEmbeddedResource("mono-bundled-assembly.template");
         string satelliteAssemblyTemplate = Utils.GetEmbeddedResource("mono-bundled-satellite-assembly.template");
         string symbolDataTemplate = Utils.GetEmbeddedResource("mono-bundled-data.template");
 
         var preallocatedResources = new StringBuilder();
-        List<string> preallocatedAssemblies = new ();
-        List<string> preallocatedSatelliteAssemblies = new ();
-        List<string> preallocatedData = new ();
+        List<string> preallocatedAssemblies = new();
+        List<string> preallocatedSatelliteAssemblies = new();
+        List<string> preallocatedData = new();
         int assembliesCount = 0;
         int satelliteAssembliesCount = 0;
         int dataCount = 0;
@@ -302,6 +326,7 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
             string resourceId = tuple.registeredName;
 
             // Generate Preloaded MonoBundled*Resource structs
+            // See bundled-resources-internals.h
             string preloadedStruct;
             switch (tuple.resourceType)
             {
@@ -352,7 +377,7 @@ public abstract class EmitBundleBase : Microsoft.Build.Utilities.Task, ICancelab
                                          .Replace("%Len%", $"{resourceDataSymbol}_data_len_val"));
         }
 
-        List<string> addPreallocatedResources = new ();
+        List<string> addPreallocatedResources = new();
         if (assembliesCount != 0) {
             preallocatedResources.AppendLine($"MonoBundledResource *{bundleRegistrationFunctionName}_assembly_resources[] = {{\n{string.Join(",\n", preallocatedAssemblies)}\n}};");
             addPreallocatedResources.Add($"    mono_bundled_resources_add ({bundleRegistrationFunctionName}_assembly_resources, {assembliesCount});");

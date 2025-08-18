@@ -1,17 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Security;
-using Debug = System.Diagnostics.Debug;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Threading;
 using System.Runtime.CompilerServices;
+using System.Security;
+using System.Text;
+using System.Threading;
 
+using Internal.Runtime;
 using Internal.Runtime.Augments;
 using Internal.Runtime.CompilerHelpers;
 using Internal.Runtime.CompilerServices;
-using System.Text;
-using System.Buffers;
+
+using Debug = System.Diagnostics.Debug;
 
 namespace System.Runtime.InteropServices
 {
@@ -19,8 +21,7 @@ namespace System.Runtime.InteropServices
     /// This PInvokeMarshal class should provide full public Marshal
     /// implementation for all things related to P/Invoke marshalling
     /// </summary>
-    [CLSCompliant(false)]
-    public partial class PInvokeMarshal
+    internal static partial class PInvokeMarshal
     {
         [ThreadStatic]
         internal static int t_lastError;
@@ -45,15 +46,17 @@ namespace System.Runtime.InteropServices
         /// Return the stub to the pinvoke marshalling stub
         /// </summary>
         /// <param name="del">The delegate</param>
-        public static IntPtr GetFunctionPointerForDelegate(Delegate del)
+        public static unsafe IntPtr GetFunctionPointerForDelegate(Delegate del)
         {
             if (del == null)
                 return IntPtr.Zero;
 
-            if (del.GetEETypePtr().IsGeneric)
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+            if (del.GetMethodTable()->IsGeneric)
                 throw new ArgumentException(SR.Argument_NeedNonGenericType, "delegate");
+#pragma warning restore CA2208
 
-            NativeFunctionPointerWrapper? fpWrapper = del.Target as NativeFunctionPointerWrapper;
+            NativeFunctionPointerWrapper? fpWrapper = del.TryGetNativeFunctionPointerWrapper();
             if (fpWrapper != null)
             {
                 //
@@ -67,7 +70,7 @@ namespace System.Runtime.InteropServices
                 //
                 // Marshalling a managed delegate created from managed code into a native function pointer
                 //
-                return GetPInvokeDelegates().GetValue(del, s_AllocateThunk ??= AllocateThunk).Thunk;
+                return GetPInvokeDelegates().GetOrAdd(del, s_AllocateThunk ??= AllocateThunk).Thunk;
             }
         }
 
@@ -75,7 +78,7 @@ namespace System.Runtime.InteropServices
         /// Used to lookup whether a delegate already has thunk allocated for it
         /// </summary>
         private static ConditionalWeakTable<Delegate, PInvokeDelegateThunk> s_pInvokeDelegates;
-        private static ConditionalWeakTable<Delegate, PInvokeDelegateThunk>.CreateValueCallback s_AllocateThunk;
+        private static Func<Delegate, PInvokeDelegateThunk> s_AllocateThunk;
 
         private static ConditionalWeakTable<Delegate, PInvokeDelegateThunk> GetPInvokeDelegates()
         {
@@ -97,70 +100,80 @@ namespace System.Runtime.InteropServices
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         internal unsafe struct ThunkContextData
         {
-            public GCHandle Handle;        //  A weak GCHandle to the delegate
+            public WeakGCHandle<Delegate> Handle;        //  A weak GCHandle to the delegate
             public IntPtr FunctionPtr;     // Function pointer for open static delegates
         }
 
-        internal sealed class PInvokeDelegateThunk
+        internal sealed unsafe class PInvokeDelegateThunk
         {
-            public IntPtr Thunk;        //  Thunk pointer
-            public IntPtr ContextData;  //  ThunkContextData pointer which will be stored in the context slot of the thunk
+            public readonly IntPtr Thunk;        //  Thunk pointer
+            public readonly IntPtr ContextData;  //  ThunkContextData pointer which will be stored in the context slot of the thunk
 
             public PInvokeDelegateThunk(Delegate del)
             {
-
                 Thunk = RuntimeAugments.AllocateThunk(s_thunkPoolHeap);
-                Debug.Assert(Thunk != IntPtr.Zero);
-
                 if (Thunk == IntPtr.Zero)
                 {
-                    // We've either run out of memory, or failed to allocate a new thunk due to some other bug. Now we should fail fast
-                    Environment.FailFast("Insufficient number of thunks.");
+                    throw new OutOfMemoryException();
                 }
-                else
+
+                //
+                //  For open static delegates set target to ReverseOpenStaticDelegateStub which calls the static function pointer directly
+                //
+                IntPtr openStaticFunctionPointer = del.TryGetOpenStaticFunctionPointer();
+
+                //
+                // Allocate unmanaged memory for GCHandle of delegate and function pointer of open static delegate
+                // We will store this pointer on the context slot of thunk data
+                //
+                unsafe
                 {
-                    //
-                    // Allocate unmanaged memory for GCHandle of delegate and function pointer of open static delegate
-                    // We will store this pointer on the context slot of thunk data
-                    //
-                    unsafe
-                    {
-                        ContextData = (IntPtr)NativeMemory.Alloc((nuint)(2 * IntPtr.Size));
+                    ContextData = (IntPtr)NativeMemory.AllocZeroed((nuint)(2 * IntPtr.Size));
 
-                        ThunkContextData* thunkData = (ThunkContextData*)ContextData;
+                    ThunkContextData* thunkData = (ThunkContextData*)ContextData;
 
-                        // allocate a weak GChandle for the delegate
-                        thunkData->Handle = GCHandle.Alloc(del, GCHandleType.Weak);
-
-                        // if it is an open static delegate get the function pointer
-                        thunkData->FunctionPtr = del.GetRawFunctionPointerForOpenStaticDelegate();
-                    }
+                    // allocate a weak GChandle for the delegate
+                    thunkData->Handle = new WeakGCHandle<Delegate>(del, trackResurrection: true);
+                    thunkData->FunctionPtr = openStaticFunctionPointer;
                 }
+
+                IntPtr pTarget = RuntimeInteropData.GetDelegateMarshallingStub(new RuntimeTypeHandle(del.GetMethodTable()), openStaticFunctionPointer != IntPtr.Zero);
+                Debug.Assert(pTarget != IntPtr.Zero);
+
+                RuntimeAugments.SetThunkData(s_thunkPoolHeap, Thunk, ContextData, pTarget);
             }
 
             ~PInvokeDelegateThunk()
             {
-                // Free the thunk
-                RuntimeAugments.FreeThunk(s_thunkPoolHeap, Thunk);
-                unsafe
+                if (ContextData != IntPtr.Zero)
                 {
-                    if (ContextData != IntPtr.Zero)
+                    // free the GCHandle
+                    WeakGCHandle<Delegate> handle = ((ThunkContextData*)ContextData)->Handle;
+                    if (handle.IsAllocated)
                     {
-                        // free the GCHandle
-                        GCHandle handle = ((ThunkContextData*)ContextData)->Handle;
-                        if (handle.IsAllocated)
+                        // If the delegate is still alive, defer finalization.
+                        if (handle.TryGetTarget(out _))
                         {
-                            handle.Free();
+                            GC.ReRegisterForFinalize(this);
+                            return;
                         }
 
-                        // Free the allocated context data memory
-                        NativeMemory.Free((void*)ContextData);
+                        handle.Dispose();
                     }
+
+                    // Free the allocated context data memory
+                    NativeMemory.Free((void*)ContextData);
+                }
+
+                // Free the thunk
+                if (Thunk != IntPtr.Zero)
+                {
+                    RuntimeAugments.FreeThunk(s_thunkPoolHeap, Thunk);
                 }
             }
         }
 
-        private static PInvokeDelegateThunk AllocateThunk(Delegate del)
+        private static unsafe PInvokeDelegateThunk AllocateThunk(Delegate del)
         {
             if (s_thunkPoolHeap == null)
             {
@@ -173,19 +186,7 @@ namespace System.Runtime.InteropServices
                 Debug.Assert(s_thunkPoolHeap != null);
             }
 
-            var delegateThunk = new PInvokeDelegateThunk(del);
-
-            //
-            //  For open static delegates set target to ReverseOpenStaticDelegateStub which calls the static function pointer directly
-            //
-            bool openStaticDelegate = del.GetRawFunctionPointerForOpenStaticDelegate() != IntPtr.Zero;
-
-            IntPtr pTarget = RuntimeInteropData.GetDelegateMarshallingStub(del.GetTypeHandle(), openStaticDelegate);
-            Debug.Assert(pTarget != IntPtr.Zero);
-
-            RuntimeAugments.SetThunkData(s_thunkPoolHeap, delegateThunk.Thunk, delegateThunk.ContextData, pTarget);
-
-            return delegateThunk;
+            return new PInvokeDelegateThunk(del);
         }
 
         /// <summary>
@@ -204,21 +205,20 @@ namespace System.Runtime.InteropServices
             IntPtr pTarget;
             if (s_thunkPoolHeap != null && RuntimeAugments.TryGetThunkData(s_thunkPoolHeap, ptr, out pContext, out pTarget))
             {
-                GCHandle handle;
+                WeakGCHandle<Delegate> handle;
                 unsafe
                 {
                     // Pull out Handle from context
                     handle = ((ThunkContextData*)pContext)->Handle;
                 }
-                Delegate target = Unsafe.As<Delegate>(handle.Target);
 
-                //
-                // The delegate might already been garbage collected
-                // User should use GC.KeepAlive or whatever ways necessary to keep the delegate alive
-                // until they are done with the native function pointer
-                //
-                if (target == null)
+                if (!handle.TryGetTarget(out Delegate? target))
                 {
+                    //
+                    // The delegate might already been garbage collected
+                    // User should use GC.KeepAlive or whatever ways necessary to keep the delegate alive
+                    // until they are done with the native function pointer
+                    //
                     Environment.FailFast(SR.Delegate_GarbageCollected);
                 }
 
@@ -230,8 +230,10 @@ namespace System.Runtime.InteropServices
             // We need to create the delegate that points to the invoke method of a
             // NativeFunctionPointerWrapper derived class
             //
-            if (delegateType.ToEETypePtr().BaseType != EETypePtr.EETypePtrOf<MulticastDelegate>())
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+            if (delegateType.ToMethodTable()->BaseType != MethodTable.Of<MulticastDelegate>())
                 throw new ArgumentException(SR.Arg_MustBeDelegate, "t");
+#pragma warning restore CA2208
 
             IntPtr pDelegateCreationStub = RuntimeInteropData.GetForwardDelegateCreationStub(delegateType);
             Debug.Assert(pDelegateCreationStub != IntPtr.Zero);
@@ -266,7 +268,7 @@ namespace System.Runtime.InteropServices
         /// <summary>
         /// Retrieves the current delegate that is being called
         /// </summary>
-        public static T GetCurrentCalleeDelegate<T>() where T : class // constraint can't be System.Delegate
+        public static T GetCurrentCalleeDelegate<T>() where T : Delegate
         {
             //
             // RH keeps track of the current thunk that is being called through a secret argument / thread
@@ -277,7 +279,7 @@ namespace System.Runtime.InteropServices
 
             Debug.Assert(pContext != IntPtr.Zero);
 
-            GCHandle handle;
+            WeakGCHandle<Delegate> handle;
             unsafe
             {
                 // Pull out Handle from context
@@ -285,18 +287,17 @@ namespace System.Runtime.InteropServices
 
             }
 
-            T target = Unsafe.As<T>(handle.Target);
-
-            //
-            // The delegate might already been garbage collected
-            // User should use GC.KeepAlive or whatever ways necessary to keep the delegate alive
-            // until they are done with the native function pointer
-            //
-            if (target == null)
+            if (!handle.TryGetTarget(out Delegate? target))
             {
+                //
+                // The delegate might already been garbage collected
+                // User should use GC.KeepAlive or whatever ways necessary to keep the delegate alive
+                // until they are done with the native function pointer
+                //
                 Environment.FailFast(SR.Delegate_GarbageCollected);
             }
-            return target;
+
+            return Unsafe.As<T>(target);
         }
         #endregion
 
@@ -345,8 +346,7 @@ namespace System.Runtime.InteropServices
 
         public static unsafe void AnsiStringToStringBuilder(byte* newBuffer, System.Text.StringBuilder stringBuilder)
         {
-            if (newBuffer == null)
-                throw new ArgumentNullException(nameof(newBuffer));
+            ArgumentNullException.ThrowIfNull(newBuffer);
 
             int lenAnsi;
             int lenUnicode;
@@ -432,8 +432,7 @@ namespace System.Runtime.InteropServices
                 return;
 
             // Desktop CLR crash (AV at runtime) - we can do better in .NET Native
-            if (pNative == null)
-                throw new ArgumentNullException(nameof(pNative));
+            ArgumentNullException.ThrowIfNull(pNative);
 
             int lenUnicode = managedArray.Length;
             fixed (char* pManaged = managedArray)

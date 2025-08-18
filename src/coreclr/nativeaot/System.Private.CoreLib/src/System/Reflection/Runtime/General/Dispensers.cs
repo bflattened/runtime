@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
 using System.Collections.Generic;
-
-using System.Reflection.Runtime.General;
-using System.Reflection.Runtime.TypeInfos;
+using System.IO;
 using System.Reflection.Runtime.Assemblies;
 using System.Reflection.Runtime.Dispensers;
+using System.Reflection.Runtime.General;
 using System.Reflection.Runtime.PropertyInfos;
+using System.Reflection.Runtime.TypeInfos;
 
 using Internal.Reflection.Core;
 using Internal.Reflection.Core.Execution;
@@ -36,42 +35,6 @@ namespace System.Reflection.Runtime.Assemblies
             Exception assemblyLoadException = TryGetRuntimeAssembly(assemblyRefName, out RuntimeAssemblyInfo result);
             if (assemblyLoadException != null)
                 throw assemblyLoadException;
-            return result;
-        }
-
-        /// <summary>
-        /// Returns non-null or throws.
-        /// </summary>
-        internal static RuntimeAssembly GetRuntimeAssemblyFromByteArray(ReadOnlySpan<byte> rawAssembly, ReadOnlySpan<byte> pdbSymbolStore)
-        {
-            AssemblyBinder binder = ReflectionCoreExecution.ExecutionEnvironment.AssemblyBinder;
-            if (!binder.Bind(rawAssembly, pdbSymbolStore, out AssemblyBindResult bindResult, out Exception exception))
-            {
-                if (exception != null)
-                    throw exception;
-                else
-                    throw new BadImageFormatException();
-            }
-
-            RuntimeAssembly result = GetRuntimeAssembly(bindResult);
-            return result;
-        }
-
-        /// <summary>
-        /// Returns non-null or throws.
-        /// </summary>
-        internal static RuntimeAssembly GetRuntimeAssemblyFromPath(string assemblyPath)
-        {
-            AssemblyBinder binder = ReflectionCoreExecution.ExecutionEnvironment.AssemblyBinder;
-            if (!binder.Bind(assemblyPath, out AssemblyBindResult bindResult, out Exception exception))
-            {
-                if (exception != null)
-                    throw exception;
-                else
-                    throw new BadImageFormatException();
-            }
-
-            RuntimeAssembly result = GetRuntimeAssembly(bindResult, assemblyPath);
             return result;
         }
 

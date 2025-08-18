@@ -92,11 +92,6 @@ namespace System
                 SpanHelpers.ClearWithoutReferences(ref ptr, byteLength);
         }
 
-        public static void ConstrainedCopy(Array sourceArray, int sourceIndex, Array destinationArray, int destinationIndex, int length)
-        {
-            Copy(sourceArray, sourceIndex, destinationArray, destinationIndex, length, true);
-        }
-
         public static void Copy(Array sourceArray, Array destinationArray, int length)
         {
             ArgumentNullException.ThrowIfNull(sourceArray);
@@ -108,10 +103,10 @@ namespace System
 
         public static void Copy(Array sourceArray, int sourceIndex, Array destinationArray, int destinationIndex, int length)
         {
-            Copy(sourceArray, sourceIndex, destinationArray, destinationIndex, length, false);
+            CopyImpl(sourceArray, sourceIndex, destinationArray, destinationIndex, length, false);
         }
 
-        private static void Copy(Array sourceArray, int sourceIndex, Array destinationArray, int destinationIndex, int length, bool reliable)
+        private static void CopyImpl(Array sourceArray, int sourceIndex, Array destinationArray, int destinationIndex, int length, bool reliable)
         {
             ArgumentNullException.ThrowIfNull(sourceArray);
             ArgumentNullException.ThrowIfNull(destinationArray);
@@ -196,7 +191,7 @@ namespace System
                 {
                     GetValueImpl(src_handle, val_handle, source_pos + i);
 
-                    if (dst_type_vt && (srcval == null || (src_type == typeof(object) && !dst_elem_type.IsAssignableFrom (srcval.GetType()))))
+                    if (dst_type_vt && (srcval == null || (src_type == typeof(object) && !dst_elem_type.IsAssignableFrom(srcval.GetType()))))
                         throw new InvalidCastException(SR.InvalidCast_DownCastArrayElement);
 
                     try
@@ -259,7 +254,7 @@ namespace System
                 }
                 else if (source.IsPointer && target.IsPointer)
                 {
-                    return true;
+                    return target.IsAssignableFrom(source);
                 }
                 else if (source.IsPrimitive && target.IsPrimitive)
                 {
@@ -281,13 +276,18 @@ namespace System
         private static unsafe Array InternalCreate(RuntimeType elementType, int rank, int* lengths, int* lowerBounds)
         {
             Array? array = null;
-            InternalCreate(ref array, elementType._impl.Value,  rank, lengths, lowerBounds);
+            InternalCreate(ref array, elementType._impl.Value, rank, lengths, lowerBounds);
             GC.KeepAlive(elementType);
             return array!;
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern unsafe void InternalCreate(ref Array? result, IntPtr elementType, int rank, int* lengths, int* lowerBounds);
+
+        private static unsafe Array InternalCreateFromArrayType(Type arrayType, int rank, int* pLengths, int* pLowerBounds)
+        {
+            return InternalCreate((arrayType.GetElementType() as RuntimeType)!, rank, pLengths, pLowerBounds);
+        }
 
         private unsafe nint GetFlattenedIndex(int rawIndex)
         {

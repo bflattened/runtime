@@ -1,10 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Collections.Generic;
 using System.Reflection.Runtime.BindingFlagSupport;
 using System.Reflection.Runtime.General;
 
@@ -266,7 +266,7 @@ namespace System.Reflection.Runtime.TypeInfos
             {
                 #region Lookup Methods
                 MethodInfo[] semiFinalists = (MethodInfo[])GetMember(name, MemberTypes.Method, bindingFlags);
-                LowLevelListWithIList<MethodInfo>? results = null;
+                ArrayBuilder<MethodInfo> results = default;
 
                 for (int i = 0; i < semiFinalists.Length; i++)
                 {
@@ -282,9 +282,8 @@ namespace System.Reflection.Runtime.TypeInfos
                     }
                     else
                     {
-                        if (results == null)
+                        if (results.Count == 0)
                         {
-                            results = new LowLevelListWithIList<MethodInfo>(semiFinalists.Length);
                             results.Add(finalist);
                         }
 
@@ -292,11 +291,9 @@ namespace System.Reflection.Runtime.TypeInfos
                     }
                 }
 
-                if (results != null)
+                if (results.Count > 0)
                 {
-                    Debug.Assert(results.Count > 1);
-                    finalists = new MethodInfo[results.Count];
-                    results.CopyTo(finalists, 0);
+                    finalists = results.ToArray();
                 }
                 #endregion
             }
@@ -309,7 +306,7 @@ namespace System.Reflection.Runtime.TypeInfos
             {
                 #region Lookup Property
                 PropertyInfo[] semiFinalists = (PropertyInfo[])GetMember(name, MemberTypes.Property, bindingFlags);
-                LowLevelListWithIList<MethodInfo>? results = null;
+                ArrayBuilder<MethodInfo> results = default;
 
                 for (int i = 0; i < semiFinalists.Length; i++)
                 {
@@ -340,9 +337,8 @@ namespace System.Reflection.Runtime.TypeInfos
                     }
                     else
                     {
-                        if (results == null)
+                        if (results.Count == 0)
                         {
-                            results = new LowLevelListWithIList<MethodInfo>(semiFinalists.Length);
                             results.Add(finalist);
                         }
 
@@ -350,11 +346,9 @@ namespace System.Reflection.Runtime.TypeInfos
                     }
                 }
 
-                if (results != null)
+                if (results.Count > 0)
                 {
-                    Debug.Assert(results.Count > 1);
-                    finalists = new MethodInfo[results.Count];
-                    results.CopyTo(finalists, 0);
+                    finalists = results.ToArray();
                 }
                 #endregion
             }

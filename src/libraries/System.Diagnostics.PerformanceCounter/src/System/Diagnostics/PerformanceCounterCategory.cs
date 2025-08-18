@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel;
 using System;
-using System.Threading;
 using System.Collections;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace System.Diagnostics
 {
@@ -73,12 +73,7 @@ namespace System.Diagnostics
                 if (value.Length == 0)
                     throw new ArgumentException(SR.Format(SR.InvalidProperty, nameof(CategoryName), value), nameof(value));
 
-                // the lock prevents a race between setting CategoryName and MachineName, since this permission
-                // checks depend on both pieces of info.
-                lock (this)
-                {
-                    _categoryName = value;
-                }
+                _categoryName = value;
             }
         }
 
@@ -136,12 +131,7 @@ namespace System.Diagnostics
                 if (!SyntaxCheck.CheckMachineName(value))
                     throw new ArgumentException(SR.Format(SR.InvalidProperty, nameof(MachineName), value), nameof(value));
 
-                // the lock prevents a race between setting CategoryName and MachineName, since this permission
-                // checks depend on both pieces of info.
-                lock (this)
-                {
-                    _machineName = value;
-                }
+                _machineName = value;
             }
         }
 

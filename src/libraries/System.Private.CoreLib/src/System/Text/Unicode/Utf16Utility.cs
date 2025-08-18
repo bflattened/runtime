@@ -1,9 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+#if NET
 using System.Runtime.Intrinsics;
+#endif
 
 namespace System.Text.Unicode
 {
@@ -277,6 +279,7 @@ namespace System.Text.Unicode
             return (differentBits & indicator) == 0;
         }
 
+#if SYSTEM_PRIVATE_CORELIB
         /// <summary>
         /// Returns true iff the TVector represents ASCII UTF-16 characters in machine endianness.
         /// </summary>
@@ -284,7 +287,8 @@ namespace System.Text.Unicode
         internal static bool AllCharsInVectorAreAscii<TVector>(TVector vec)
             where TVector : struct, ISimdVector<TVector, ushort>
         {
-            return (vec & TVector.Create(unchecked((ushort)~0x007F))).Equals(TVector.Zero);
+            return (vec & TVector.Create(unchecked((ushort)~0x007F))) == TVector.Zero;
         }
+#endif
     }
 }

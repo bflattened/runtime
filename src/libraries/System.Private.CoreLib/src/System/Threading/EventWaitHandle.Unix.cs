@@ -1,30 +1,48 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace System.Threading
 {
     public partial class EventWaitHandle
     {
-        private void CreateEventCore(bool initialState, EventResetMode mode, string? name, out bool createdNew)
+        private void CreateEventCore(bool initialState, EventResetMode mode)
         {
+            ValidateMode(mode);
+            SafeWaitHandle = WaitSubsystem.NewEvent(initialState, mode);
+        }
+
+#pragma warning disable IDE0060 // Unused parameter
+        private void CreateEventCore(
+            bool initialState,
+            EventResetMode mode,
+            string? name,
+            NamedWaitHandleOptionsInternal options,
+            out bool createdNew)
+        {
+            ValidateMode(mode);
+
             if (name != null)
+            {
                 throw new PlatformNotSupportedException(SR.PlatformNotSupported_NamedSynchronizationPrimitives);
+            }
 
             SafeWaitHandle = WaitSubsystem.NewEvent(initialState, mode);
             createdNew = true;
         }
+#pragma warning restore IDE0060
 
-#pragma warning disable IDE0060
-        private static OpenExistingResult OpenExistingWorker(string name, out EventWaitHandle? result)
+        private static OpenExistingResult OpenExistingWorker(
+            string name,
+            NamedWaitHandleOptionsInternal options,
+            out EventWaitHandle? result)
         {
             throw new PlatformNotSupportedException(SR.PlatformNotSupported_NamedSynchronizationPrimitives);
         }
-#pragma warning restore IDE0060
 
         public bool Reset()
         {

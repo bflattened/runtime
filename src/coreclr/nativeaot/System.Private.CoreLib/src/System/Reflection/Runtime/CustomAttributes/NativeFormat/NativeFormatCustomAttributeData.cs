@@ -2,23 +2,23 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Reflection;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Reflection.Runtime.General;
-using System.Reflection.Runtime.TypeInfos;
-using System.Reflection.Runtime.TypeInfos.NativeFormat;
 using System.Reflection.Runtime.MethodInfos;
 using System.Reflection.Runtime.MethodInfos.NativeFormat;
+using System.Reflection.Runtime.TypeInfos;
+using System.Reflection.Runtime.TypeInfos.NativeFormat;
 
 using Internal.LowLevelLinq;
-using Internal.Reflection.Core;
-using Internal.Reflection.Augments;
-using Internal.Reflection.Core.Execution;
 using Internal.Metadata.NativeFormat;
+using Internal.Reflection.Augments;
+using Internal.Reflection.Core;
+using Internal.Reflection.Core.Execution;
 
 namespace System.Reflection.Runtime.CustomAttributes.NativeFormat
 {
@@ -116,7 +116,7 @@ namespace System.Reflection.Runtime.CustomAttributes.NativeFormat
             }
             Handle[] ctorTypeHandles = parameterTypeSignatureHandles.ToArray();
 
-            LowLevelListWithIList<CustomAttributeTypedArgument> customAttributeTypedArguments = new LowLevelListWithIList<CustomAttributeTypedArgument>();
+            ArrayBuilder<CustomAttributeTypedArgument> customAttributeTypedArguments = new ArrayBuilder<CustomAttributeTypedArgument>(_customAttribute.FixedArguments.Count);
             foreach (Handle fixedArgumentHandle in _customAttribute.FixedArguments)
             {
                 Handle typeHandle = ctorTypeHandles[index];
@@ -147,7 +147,7 @@ namespace System.Reflection.Runtime.CustomAttributes.NativeFormat
                 index++;
             }
 
-            return customAttributeTypedArguments;
+            return customAttributeTypedArguments.ToArray();
         }
 
         //
@@ -155,7 +155,7 @@ namespace System.Reflection.Runtime.CustomAttributes.NativeFormat
         //
         internal sealed override IList<CustomAttributeNamedArgument> GetNamedArguments(bool throwIfMissingMetadata)
         {
-            LowLevelListWithIList<CustomAttributeNamedArgument> customAttributeNamedArguments = new LowLevelListWithIList<CustomAttributeNamedArgument>();
+            ArrayBuilder<CustomAttributeNamedArgument> customAttributeNamedArguments = new ArrayBuilder<CustomAttributeNamedArgument>(_customAttribute.NamedArguments.Count);
             foreach (NamedArgumentHandle namedArgumentHandle in _customAttribute.NamedArguments)
             {
                 NamedArgument namedArgument = namedArgumentHandle.GetNamedArgument(_reader);
@@ -185,7 +185,7 @@ namespace System.Reflection.Runtime.CustomAttributes.NativeFormat
 
                 customAttributeNamedArguments.Add(CreateCustomAttributeNamedArgument(this.AttributeType, memberName, isField, typedValue));
             }
-            return customAttributeNamedArguments;
+            return customAttributeNamedArguments.ToArray();
         }
 
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2070:UnrecognizedReflectionPattern",

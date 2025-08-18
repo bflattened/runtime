@@ -17,6 +17,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
     internal readonly partial struct ExpressionBinder
     {
+        [RequiresDynamicCode(Binder.DynamicCodeWarning)]
         internal sealed class GroupToArgsBinder
         {
             private enum Result
@@ -804,7 +805,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
                 while (_HiddenTypes.Contains(_pCurrentType))
                 {
                     // Move through this type and get the next one.
-                    for (; iterator.CurrentType == _pCurrentType; iterator.MoveNext());
+                    for (; iterator.CurrentType == _pCurrentType; iterator.MoveNext()) ;
                     _pCurrentSym = iterator.CurrentSymbol;
                     _pCurrentType = iterator.CurrentType;
 

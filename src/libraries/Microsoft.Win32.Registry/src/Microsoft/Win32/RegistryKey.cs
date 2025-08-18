@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -12,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.AccessControl;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 /*
   Note on ACL support:
@@ -66,8 +66,8 @@ namespace Microsoft.Win32
         private const int MaxKeyLength = 255;
         private const int MaxValueLength = 16383;
 
-        private volatile SafeRegistryHandle _hkey;
-        private volatile string _keyName;
+        private SafeRegistryHandle _hkey;
+        private string _keyName;
         private readonly bool _remoteKey;
         private volatile StateFlags _state;
         private volatile RegistryKeyPermissionCheck _checkMode;
@@ -185,17 +185,17 @@ namespace Microsoft.Win32
             return CreateSubKey(subkey, permissionCheck, RegistryOptions.None);
         }
 
-        public RegistryKey CreateSubKey(string subkey, RegistryKeyPermissionCheck permissionCheck, RegistryOptions registryOptions, RegistrySecurity? registrySecurity)
-        {
-            return CreateSubKey(subkey, permissionCheck, registryOptions);
-        }
-
         public RegistryKey CreateSubKey(string subkey, RegistryKeyPermissionCheck permissionCheck, RegistrySecurity? registrySecurity)
         {
-            return CreateSubKey(subkey, permissionCheck, RegistryOptions.None);
+            return CreateSubKey(subkey, permissionCheck, RegistryOptions.None, registrySecurity);
         }
 
         public RegistryKey CreateSubKey(string subkey, RegistryKeyPermissionCheck permissionCheck, RegistryOptions registryOptions)
+        {
+            return CreateSubKey(subkey, permissionCheck, registryOptions, registrySecurity: null);
+        }
+
+        public unsafe RegistryKey CreateSubKey(string subkey, RegistryKeyPermissionCheck permissionCheck, RegistryOptions registryOptions, RegistrySecurity? registrySecurity)
         {
             ValidateKeyOptions(registryOptions);
             ValidateKeyName(subkey);
@@ -216,43 +216,56 @@ namespace Microsoft.Win32
             }
 
             Interop.Kernel32.SECURITY_ATTRIBUTES secAttrs = default;
+            byte[]? securityDescriptor = registrySecurity?.GetSecurityDescriptorBinaryForm();
 
-            // By default, the new key will be writable.
-            int ret = Interop.Advapi32.RegCreateKeyEx(_hkey,
-                subkey,
-                0,
-                null,
-                (int)registryOptions /* specifies if the key is volatile */,
-                GetRegistryKeyAccess(permissionCheck != RegistryKeyPermissionCheck.ReadSubTree) | (int)_regView,
-                ref secAttrs,
-                out SafeRegistryHandle result,
-                out int _);
-
-            if (ret == 0 && !result.IsInvalid)
+            fixed (void* pSecurityDescriptor = securityDescriptor)
             {
-                RegistryKey key = new RegistryKey(result, (permissionCheck != RegistryKeyPermissionCheck.ReadSubTree), false, _remoteKey, false, _regView);
-                key._checkMode = permissionCheck;
-
-                if (subkey.Length == 0)
+                if (pSecurityDescriptor is not null)
                 {
-                    key._keyName = _keyName;
+                    secAttrs = new()
+                    {
+                        nLength = (uint)sizeof(Interop.Kernel32.SECURITY_ATTRIBUTES),
+                        lpSecurityDescriptor = pSecurityDescriptor
+                    };
                 }
-                else
+
+                // By default, the new key will be writable.
+                int ret = Interop.Advapi32.RegCreateKeyEx(_hkey,
+                    subkey,
+                    0,
+                    null,
+                    (int)registryOptions /* specifies if the key is volatile */,
+                    GetRegistryKeyAccess(permissionCheck != RegistryKeyPermissionCheck.ReadSubTree) | (int)_regView,
+                    ref secAttrs,
+                    out SafeRegistryHandle result,
+                    out int _);
+
+                if (ret == 0 && !result.IsInvalid)
                 {
-                    key._keyName = _keyName + "\\" + subkey;
+                    RegistryKey key = new RegistryKey(result, (permissionCheck != RegistryKeyPermissionCheck.ReadSubTree), false, _remoteKey, false, _regView);
+                    key._checkMode = permissionCheck;
+
+                    if (subkey.Length == 0)
+                    {
+                        key._keyName = _keyName;
+                    }
+                    else
+                    {
+                        key._keyName = _keyName + "\\" + subkey;
+                    }
+                    return key;
                 }
-                return key;
+
+                result.Dispose();
+
+                if (ret != 0) // syscall failed, ret is an error code.
+                {
+                    Win32Error(ret, _keyName + "\\" + subkey);  // Access denied?
+                }
+
+                Debug.Fail("Unexpected code path in RegistryKey::CreateSubKey");
+                return null;
             }
-
-            result.Dispose();
-
-            if (ret != 0) // syscall failed, ret is an error code.
-            {
-                Win32Error(ret, _keyName + "\\" + subkey);  // Access denied?
-            }
-
-            Debug.Fail("Unexpected code path in RegistryKey::CreateSubKey");
-            return null;
         }
 
         /// <summary>
@@ -1225,7 +1238,7 @@ namespace Microsoft.Win32
             SetValue(name, value, RegistryValueKind.Unknown);
         }
 
-        public unsafe void SetValue(string? name, object value, RegistryValueKind valueKind)
+        public void SetValue(string? name, object value, RegistryValueKind valueKind)
         {
             ArgumentNullException.ThrowIfNull(value);
 

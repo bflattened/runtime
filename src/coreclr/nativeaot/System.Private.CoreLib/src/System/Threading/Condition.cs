@@ -3,12 +3,12 @@
 
 #pragma warning disable 0420 //passing volatile fields by ref
 
-
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 
 namespace System.Threading
 {
-    public sealed class Condition
+    internal sealed class Condition
     {
         internal class Waiter
         {
@@ -31,6 +31,8 @@ namespace System.Threading
         private readonly Lock _lock;
         private Waiter? _waitersHead;
         private Waiter? _waitersTail;
+
+        internal Lock AssociatedLock => _lock;
 
         private unsafe void AssertIsInList(Waiter waiter)
         {
@@ -89,7 +91,9 @@ namespace System.Threading
 
         public Condition(Lock @lock)
         {
+#pragma warning disable CS9216 // A value of type 'System.Threading.Lock' converted to a different type will use likely unintended monitor-based locking in 'lock' statement.
             ArgumentNullException.ThrowIfNull(@lock);
+#pragma warning restore CS9216
             _lock = @lock;
         }
 
@@ -97,12 +101,14 @@ namespace System.Threading
 
         public bool Wait(TimeSpan timeout) => Wait(WaitHandle.ToTimeoutMilliseconds(timeout));
 
-        public unsafe bool Wait(int millisecondsTimeout)
+        public unsafe bool Wait(int millisecondsTimeout, object? associatedObjectForMonitorWait = null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(millisecondsTimeout, -1);
 
             if (!_lock.IsHeldByCurrentThread)
                 throw new SynchronizationLockException();
+
+            using ThreadBlockingInfo.Scope threadBlockingScope = new(this, millisecondsTimeout);
 
             Waiter waiter = GetWaiterForCurrentThread();
             AddWaiter(waiter);
@@ -111,7 +117,14 @@ namespace System.Threading
             bool success = false;
             try
             {
-                success = waiter.ev.WaitOne(millisecondsTimeout);
+                success =
+                    waiter.ev.WaitOneNoCheck(
+                        millisecondsTimeout,
+                        false, // useTrivialWaits
+                        associatedObjectForMonitorWait,
+                        associatedObjectForMonitorWait != null
+                            ? NativeRuntimeEventSource.WaitHandleWaitSourceMap.MonitorWait
+                            : NativeRuntimeEventSource.WaitHandleWaitSourceMap.Unknown);
             }
             finally
             {

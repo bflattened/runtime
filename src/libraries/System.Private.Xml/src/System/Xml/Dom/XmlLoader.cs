@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
-using System.Diagnostics;
-using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Xml.Schema;
 
 namespace System.Xml
@@ -82,7 +82,8 @@ namespace System.Xml
             }
             if (reader.ReadState == ReadState.Interactive)
             {
-                XmlNode n = LoadNode(true)!;
+                XmlNode? n = LoadNode(true);
+                Debug.Assert(n != null);
 
                 // Move to the next node
                 if (n.NodeType != XmlNodeType.Attribute)

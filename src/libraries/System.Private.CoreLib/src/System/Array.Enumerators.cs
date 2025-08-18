@@ -4,8 +4,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace System
 {
@@ -78,6 +78,7 @@ namespace System
             _endIndex = endIndex;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool MoveNext()
         {
             int index = _index + 1;
@@ -109,6 +110,7 @@ namespace System
         /// </remarks>
         internal static readonly SZGenericArrayEnumerator<T> Empty = new SZGenericArrayEnumerator<T>(null, 0);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal SZGenericArrayEnumerator(T[]? array, int endIndex)
             : base(endIndex)
         {

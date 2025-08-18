@@ -8,8 +8,8 @@
         <note />
       </trans-unit>
       <trans-unit id="AddGeneratedComClassAttributeDescription">
-        <source>This type implements at least one type with the 'GeneratedComInterfaceAttribute' attribute. Add the 'GeneratedComClassAttribute' to enable passing this type to COM and exposing the COM interfaces for the types with the 'GeneratedComInterfaceAttribute' from objects of this type.</source>
-        <target state="translated">Ten typ implementuje co najmniej jeden typ z atrybutem „GeneratedComInterfaceAttribute”. Dodaj atrybut „GeneratedComClassAttribute”, aby umożliwić przekazywanie tego typu do modelu COM i uwidacznianie interfejsów COM dla typów z atrybutem „GeneratedComInterfaceAttribute” z obiektów tego typu.</target>
+        <source>This type implements at least one type with the 'GeneratedComInterfaceAttribute' attribute or its base type has the 'GeneratedComClassAttribute' attribute. Add the 'GeneratedComClassAttribute' to enable passing this type to COM and exposing the COM interfaces for the types with the 'GeneratedComInterfaceAttribute' from objects of this type.</source>
+        <target state="translated">Ten typ implementuje co najmniej jeden typ z atrybutem „GeneratedComInterfaceAttribute” lub jego typ podstawowy ma atrybut „GeneratedComClassAttribute”. Dodaj atrybut „GeneratedComClassAttribute”, aby umożliwić przekazywanie tego typu do modelu COM i uwidacznianie interfejsów COM dla typów z atrybutem „GeneratedComInterfaceAttribute” z obiektów tego typu.</target>
         <note />
       </trans-unit>
       <trans-unit id="AddGeneratedComClassAttributeMessage">
@@ -65,6 +65,16 @@
       <trans-unit id="BaseInterfaceCannotBeGeneratedTitle">
         <source>The base COM interface failed to generate source. Code will not be generated for this interface.</source>
         <target state="translated">Podstawowy interfejs COM nie może wygenerować źródła. Kod nie zostanie wygenerowany dla tego interfejsu.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="BaseInterfaceDefinedInOtherAssemblyMessage">
+        <source>The type '{0}' has a base interface '{1}' defined in a different assembly. This can cause a variety of difficult to diagnose issues in some scenarios</source>
+        <target state="translated">Typ „{0}” ma interfejs podstawowy „{1}” zdefiniowany w innym zestawie. Może to powodować różne trudne do zdiagnozowania problemy w niektórych scenariuszach</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="BaseInterfaceDefinedInOtherAssemblyTitle">
+        <source>Specifying 'GeneratedComInterfaceAttribute' on an interface that has a base interface defined in another assembly is not supported</source>
+        <target state="translated">Określanie atrybutu „GeneratedComInterfaceAttribute” dla interfejsu, który ma interfejs podstawowy zdefiniowany w innym zespole, nie jest obsługiwane</target>
         <note />
       </trans-unit>
       <trans-unit id="BaseInterfaceMustGenerateAtLeastSameWrappers">
@@ -149,12 +159,12 @@
       </trans-unit>
       <trans-unit id="ComInterfaceUsageDoesNotFollowBestPracticesMessageWithDetails">
         <source>The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations. {0}</source>
-        <target state="new">The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations. {0}</target>
+        <target state="translated">Użycie atrybutu „GeneratedComInterfaceAttribute” nie jest zgodne z zaleceniami. {0}</target>
         <note />
       </trans-unit>
       <trans-unit id="ComInterfaceUsageDoesNotFollowBestPracticesTitle">
         <source>The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations.</source>
-        <target state="new">The usage of 'GeneratedComInterfaceAttribute' does not follow recommendations.</target>
+        <target state="translated">Użycie atrybutu „GeneratedComInterfaceAttribute” nie jest zgodne z zaleceniami.</target>
         <note />
       </trans-unit>
       <trans-unit id="ComMethodReturningIntWillBeOutParameterMessage">
@@ -382,6 +392,11 @@
         <target state="translated">Typ marshallera punktu wejścia „{0}” dla typu „{1}” musi być typem z co najmniej jednym atrybutem „System.Runtime.InteropServices.CustomMarshaellerAttribute”, który określa ten typ jako typ zarządzany</target>
         <note />
       </trans-unit>
+      <trans-unit id="ExceptionToUnmanagedMarshallerNotAccessibleByGeneratedCode">
+        <source>The type '{0}' specified as 'GeneratedComInterfaceAttribute.ExceptionToUnmanagedMarshaller' is not accessible by generated code. The type must have at least 'internal' accessibility. {1}</source>
+        <target state="translated">Wygenerowany kod nie ma dostępu do typu „{0}” określonego jako „GeneratedComInterfaceAttribute.ExceptionToUnmanagedMarshainger”. Typ musi mieć co najmniej ułatwienia dostępu „wewnętrzne”. {1}</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ExtraneousMarshallingInfo">
         <source>Marshalling info was specified for 'ElementIndirectionDepth' {0}, but marshalling info was only needed for {1} level(s) of indirection</source>
         <target state="translated">Informacje dotyczące skierowania zostały określone dla elementu „ElementIndirectionDepth” {0}, ale informacje dotyczące skierowania były potrzebne tylko dla poziomów pośrednich w liczbie {1}</target>
@@ -422,6 +437,11 @@
         <target state="translated">Konfiguracja elementów „StringMarssourceing” i „StringMarsxtingCustomType” musi być zgodna z podstawowym interfejsem COM.</target>
         <note />
       </trans-unit>
+      <trans-unit id="GenericDelegatesNotSupported">
+        <source>Marshalling a generic delegate is not supported. Consider using a function pointer instead.</source>
+        <target state="translated">Marshalling ogólnego delegata nie jest obsługiwane. Zamiast tego rozważ użycie wskaźnika funkcji.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="GenericEntryPointMarshallerTypeMustBeClosedOrMatchArityDescription">
         <source>The marshaller type must be a closed generic or have the same number of generic parameters as the managed type so the emitted code can use a specific instantiation.</source>
         <target state="translated">Typ marshallera musi być zamkniętym typem ogólnym lub mieć taką samą liczbę parametrów ogólnych jak typ zarządzany, aby emitowany kod mógł używać określonego wystąpienia.</target>
@@ -449,17 +469,17 @@
       </trans-unit>
       <trans-unit id="HResultTypeWillBeTreatedAsStructMessage">
         <source>The type '{0}' will be treated as a struct in the native signature, not as a native HRESULT. To treat this as an HRESULT, add '[return:MarshalAs(UnmanagedType.Error)]' to the method.</source>
-        <target state="new">The type '{0}' will be treated as a struct in the native signature, not as a native HRESULT. To treat this as an HRESULT, add '[return:MarshalAs(UnmanagedType.Error)]' to the method.</target>
+        <target state="translated">Typ „{0}” będzie traktowany jako struktura w podpisie natywnym, a nie jako natywny wynik HRESULT. Aby traktować to jako HRESULT, dodaj element „[return:MarshalAs(UnmanagedType.Error)]” do metody.</target>
         <note />
       </trans-unit>
       <trans-unit id="HResultTypeWillBeTreatedAsStructTitle">
         <source>This type will be treated as a struct in the native signature, not as a native HRESULT</source>
-        <target state="new">This type will be treated as a struct in the native signature, not as a native HRESULT</target>
+        <target state="translated">Ten typ będzie traktowany jako struktura w podpisie natywnym, a nie jako natywny wynik HRESULT</target>
         <note />
       </trans-unit>
       <trans-unit id="InAttributeNotSupportedOnByValueParameters">
         <source>The '[In]' attribute is only supported on array parameters. By-value parameters are considered read-only by default.</source>
-        <target state="new">The '[In]' attribute is only supported on array parameters. By-value parameters are considered read-only by default.</target>
+        <target state="translated">Atrybut „[In]” jest obsługiwany tylko w przypadku parametrów tablicy. Parametry według wartości są domyślnie uznawane za tylko do odczytu.</target>
         <note />
       </trans-unit>
       <trans-unit id="InAttributeNotSupportedWithoutOutBlittableArray">
@@ -484,7 +504,7 @@
       </trans-unit>
       <trans-unit id="InOutAttributeNotSupportedOnByValueParameters">
         <source>The '[In]' and '[Out]' attributes are only supported on array parameters. Consider using the 'ref' keyword to make the parameter mutable.</source>
-        <target state="new">The '[In]' and '[Out]' attributes are only supported on array parameters. Consider using the 'ref' keyword to make the parameter mutable.</target>
+        <target state="translated">Atrybuty „[In]” i „[Out]” są obsługiwane tylko w przypadku parametrów tablicy. Rozważ użycie słowa kluczowego „ref”, aby umożliwić modyfikowanie parametru.</target>
         <note />
       </trans-unit>
       <trans-unit id="InOutAttributes">
@@ -494,7 +514,7 @@
       </trans-unit>
       <trans-unit id="InVariantShouldBeRef">
         <source>Objects marshalled from VARIANTs as 'in' parameters in unmanaged-to-managed calls will not propagate back the updated result, even if the VARIANT is a VT_BYREF variant. Use a 'ref' parameter instead of an 'in' parameter to propagate the updated value back to the caller.</source>
-        <target state="new">Objects marshalled from VARIANTs as 'in' parameters in unmanaged-to-managed calls will not propagate back the updated result, even if the VARIANT is a VT_BYREF variant. Use a 'ref' parameter instead of an 'in' parameter to propagate the updated value back to the caller.</target>
+        <target state="translated">Obiekty przekazywane z obiektów VARIANT jako parametry „w” w wywołaniach niezarządzanych do zarządzanych nie będą propagować z powrotem zaktualizowanego wyniku, nawet jeśli parametr VARIANT jest wariantem VT_BYREF. Użyj parametru „ref” zamiast parametru „w”, aby propagować zaktualizowaną wartość z powrotem do obiektu wywołującego.</target>
         <note />
       </trans-unit>
       <trans-unit id="InstanceEventDeclaredInInterfaceDescription">
@@ -600,6 +620,11 @@
       <trans-unit id="InvalidExceptionMarshallingValue">
         <source>The provided value is not a known flag of the 'ExceptionMarshalling' enum.</source>
         <target state="translated">Podana wartość nie jest znaną flagą wyliczenia „'ExceptionMarshalling”.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InvalidExceptionToUnmanagedMarshallerType">
+        <source>The type specified as 'GeneratedComInterfaceAttribute.ExceptionToUnmanagedMarshaller' is not a valid marshaller type.</source>
+        <target state="translated">Typ określony jako „GeneratedComInterfaceAttribute.ExceptionToUnmanagedMarshainger” nie jest prawidłowym typem marshaller.</target>
         <note />
       </trans-unit>
       <trans-unit id="InvalidGeneratedComClassAttributeUsageDescription">
@@ -729,12 +754,12 @@
       </trans-unit>
       <trans-unit id="LibraryImportUsageDoesNotFollowBestPracticesMessageWithDetails">
         <source>The usage of 'LibraryImportAttribute' does not follow recommendations. {0}</source>
-        <target state="new">The usage of 'LibraryImportAttribute' does not follow recommendations. {0}</target>
+        <target state="translated">Użycie atrybutu „LibraryImportAttribute” nie jest zgodne z zaleceniami. {0}</target>
         <note />
       </trans-unit>
       <trans-unit id="LibraryImportUsageDoesNotFollowBestPracticesTitle">
         <source>The usage of 'LibraryImportAttribute' does not follow recommendations.</source>
-        <target state="new">The usage of 'LibraryImportAttribute' does not follow recommendations.</target>
+        <target state="translated">Użycie atrybutu „LibraryImportAttribute” nie jest zgodne z zaleceniami.</target>
         <note />
       </trans-unit>
       <trans-unit id="LinearCollectionElementTypesMustMatchDescription">
@@ -832,9 +857,9 @@
         <target state="translated">Typ punktu wejścia marshallera „{0}” dla typu zarządzanego „{1}” musi mieć liczbę argumentów o jeden większą niż typ zarządzany.</target>
         <note />
       </trans-unit>
-      <trans-unit id="MarshallerInNativeReturnPositionMustMatchNativeReturnType">
-        <source>All marshallers for values that are passed as the unmanaged return value must have the same unmanaged type.</source>
-        <target state="translated">Wszystkie elementy organizujące dla wartości przekazywanych jako niezarządzana wartość zwracana muszą mieć ten sam typ niezarządzany.</target>
+      <trans-unit id="MarshallerInOverlappingNativePositionMustMatchNativeType">
+        <source>All marshallers for values that are passed as the unmanaged return value or parameter must have the same unmanaged type.</source>
+        <target state="translated">Wszystkie elementy organizujące dla wartości przekazywanych jako niezarządzana wartość zwracana lub parametr muszą mieć ten sam typ niezarządzany.</target>
         <note />
       </trans-unit>
       <trans-unit id="MarshallerTypeMustBeClosedOrMatchArityDescription">
@@ -939,7 +964,7 @@
       </trans-unit>
       <trans-unit id="OutAttributeNotSupportedOnByValueParameters">
         <source>The '[Out]' attribute is only supported on array parameters. Consider using 'out' or 'ref' keywords to make the parameter mutable.</source>
-        <target state="needs-review-translation">Atrybut „[Out]” jest obsługiwany tylko w przypadku parametrów tablicy. Rozważ użycie słów kluczowych „out” lub „ref”, aby umożliwić modyfikowanie parametru.</target>
+        <target state="translated">Atrybut „[Out]” jest obsługiwany tylko w przypadku parametrów tablicy. Rozważ użycie słów kluczowych „out” lub „ref”, aby umożliwić modyfikowanie parametru.</target>
         <note />
       </trans-unit>
       <trans-unit id="OutRequiresToManagedDescription">
@@ -954,7 +979,7 @@
       </trans-unit>
       <trans-unit id="PreferExplicitInOutAttributesOnArrays">
         <source>It is recommended to use explicit '[In]' and '[Out]' attributes on array parameters.</source>
-        <target state="new">It is recommended to use explicit '[In]' and '[Out]' attributes on array parameters.</target>
+        <target state="translated">Zaleca się używanie jawnych atrybutów „[In]” i „[Out]” w parametrach tablicy.</target>
         <note />
       </trans-unit>
       <trans-unit id="RequiresAllowUnsafeBlocksDescriptionCom">

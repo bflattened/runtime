@@ -1,10 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.InteropServices;
+
+using Microsoft.Win32.SafeHandles;
 
 namespace System.Threading
 {
@@ -86,14 +87,21 @@ namespace System.Threading
             }
         }
 
-        private unsafe bool CreateThread(GCHandle thisThreadHandle)
+        private unsafe bool CreateThread(GCHandle<Thread> thisThreadHandle)
         {
             // Create the Stop event before starting the thread to make sure
             // it is ready to be signaled at thread shutdown time.
             // This also avoids OOM after creating the thread.
             _stopped = new ManualResetEvent(false);
 
-            if (!Interop.Sys.CreateThread((IntPtr)_startHelper!._maxStackSize, &ThreadEntryPoint, (IntPtr)thisThreadHandle))
+            nint stackSize = _startHelper!._maxStackSize;
+
+            if (stackSize <= 0)
+            {
+                stackSize = RuntimeImports.RhGetDefaultStackSize();
+            }
+
+            if (!Interop.Sys.CreateThread(stackSize, &ThreadEntryPoint, GCHandle<Thread>.ToIntPtr(thisThreadHandle)))
             {
                 return false;
             }
@@ -135,10 +143,6 @@ namespace System.Threading
         }
 
         partial void InitializeComOnNewThread();
-
-        internal static void InitializeComForFinalizerThread()
-        {
-        }
 
         public void DisableComObjectEagerCleanup() { }
 

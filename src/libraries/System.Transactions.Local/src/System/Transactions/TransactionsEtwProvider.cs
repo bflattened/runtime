@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Collections;
+using System.Text;
+using System.Threading.Tasks;
 using System.Transactions.Oletx;
 
 namespace System.Transactions
@@ -197,7 +197,7 @@ namespace System.Transactions
         /// <summary>The event ID for the transaction deserialized event.</summary>
         private const int TRANSACTION_DESERIALIZED_EVENTID = 50;
         /// <summary>The event ID for when we encounter a new Transactions object that hasn't had its name traced to the trace file.</summary>
-        private const int TRANSACTION_CREATED_OLETX_EVENTID = 11;
+        private const int TRANSACTION_CREATED_OLETX_EVENTID = 51;
 
         /// <summary>The event ID for the enlistment status.</summary>
         private const int ENLISTMENT_OLETX_EVENTID = 52;

@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Xml;
 using System.Collections.Generic;
+using System.Xml;
 
 namespace System.ServiceModel.Syndication
 {
@@ -28,10 +28,7 @@ namespace System.ServiceModel.Syndication
 
         protected SyndicationCategory(SyndicationCategory source)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentNullException.ThrowIfNull(source);
 
             Label = source.Label;
             Name = source.Name;

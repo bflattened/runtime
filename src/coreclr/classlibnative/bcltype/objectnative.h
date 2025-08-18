@@ -24,21 +24,24 @@
 class ObjectNative
 {
 public:
-
-    // This method will return a Class object for the object
-    //  iff the Class object has already been created.
-    //  If the Class object doesn't exist then you must call the GetClass() method.
-    static FCDECL1(Object*, GetObjectValue, Object* vThisRef);
-    static FCDECL1(INT32, GetHashCode, Object* vThisRef);
     static FCDECL1(INT32, TryGetHashCode, Object* vThisRef);
-    static FCDECL2(FC_BOOL_RET, Equals, Object *pThisRef, Object *pCompareRef);
-    static FCDECL1(Object*, AllocateUninitializedClone, Object* pObjUNSAFE);
-    static FCDECL1(Object*, GetClass, Object* pThis);
-    static FCDECL2(FC_BOOL_RET, WaitTimeout, INT32 Timeout, Object* pThisUNSAFE);
-    static FCDECL1(void, Pulse, Object* pThisUNSAFE);
-    static FCDECL1(void, PulseAll, Object* pThisUNSAFE);
+    static FCDECL2(FC_BOOL_RET, ContentEquals, Object *pThisRef, Object *pCompareRef);
     static FCDECL1(FC_BOOL_RET, IsLockHeld, Object* pThisUNSAFE);
+    
+    static FCDECL1(FC_BOOL_RET, Monitor_TryEnter_FastPath, Object* obj);
+    static FCDECL2(AwareLock::EnterHelperResult, Monitor_TryEnter_FastPath_WithTimeout, Object* obj, INT32 timeout);
+    static FCDECL1(AwareLock::LeaveHelperAction, Monitor_Exit_FastPath, Object* obj);
 };
 
-extern "C" INT64 QCALLTYPE ObjectNative_GetMonitorLockContentionCount();
+extern "C" INT32 QCALLTYPE ObjectNative_GetHashCodeSlow(QCall::ObjectHandleOnStack objHandle);
+extern "C" void QCALLTYPE ObjectNative_AllocateUninitializedClone(QCall::ObjectHandleOnStack objHandle);
+extern "C" BOOL QCALLTYPE Monitor_Wait(QCall::ObjectHandleOnStack pThis, INT32 Timeout);
+extern "C" void QCALLTYPE Monitor_Pulse(QCall::ObjectHandleOnStack pThis);
+extern "C" void QCALLTYPE Monitor_PulseAll(QCall::ObjectHandleOnStack pThis);
+extern "C" INT64 QCALLTYPE Monitor_GetLockContentionCount();
+extern "C" void QCALLTYPE Monitor_Enter_Slowpath(QCall::ObjectHandleOnStack objHandle);
+extern "C" void QCALLTYPE Monitor_Exit_Slowpath(QCall::ObjectHandleOnStack objHandle, AwareLock::LeaveHelperAction exitBehavior);
+extern "C" INT32 QCALLTYPE Monitor_TryEnter_Slowpath(QCall::ObjectHandleOnStack objHandle, INT32 timeOut);
+
+
 #endif // _OBJECTNATIVE_H_

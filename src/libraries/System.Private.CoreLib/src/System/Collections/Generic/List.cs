@@ -26,9 +26,9 @@ namespace System.Collections.Generic
         internal int _size; // Do not rename (binary serialization)
         internal int _version; // Do not rename (binary serialization)
 
-#pragma warning disable CA1825 // avoid the extra generic instantiation for Array.Empty<T>()
+#pragma warning disable CA1825, IDE0300 // avoid the extra generic instantiation for Array.Empty<T>()
         private static readonly T[] s_emptyArray = new T[0];
-#pragma warning restore CA1825
+#pragma warning restore CA1825, IDE0300
 
         // Constructs a List. The list is initially empty and has a capacity
         // of zero. Upon adding the first element to the list the capacity is
@@ -426,7 +426,7 @@ namespace System.Collections.Generic
         /// <summary>
         /// Ensures that the capacity of this list is at least the specified <paramref name="capacity"/>.
         /// If the current capacity of the list is less than specified <paramref name="capacity"/>,
-        /// the capacity is increased by continuously twice current capacity until it is at least the specified <paramref name="capacity"/>.
+        /// the capacity is increased to at least <paramref name="capacity"/>.
         /// </summary>
         /// <param name="capacity">The minimum capacity to ensure.</param>
         /// <returns>The new capacity of this list.</returns>
@@ -461,7 +461,7 @@ namespace System.Collections.Generic
         /// </summary>
         /// <param name="indexToInsert">Index of the first insertion.</param>
         /// <param name="insertionCount">How many elements will be inserted.</param>
-        private void GrowForInsertion(int indexToInsert, int insertionCount = 1)
+        internal void GrowForInsertion(int indexToInsert, int insertionCount = 1)
         {
             Debug.Assert(insertionCount > 0);
 
@@ -1184,19 +1184,16 @@ namespace System.Collections.Generic
 
         public struct Enumerator : IEnumerator<T>, IEnumerator
         {
-            internal static IEnumerator<T>? s_emptyEnumerator;
-
             private readonly List<T> _list;
-            private int _index;
             private readonly int _version;
+
+            private int _index;
             private T? _current;
 
             internal Enumerator(List<T> list)
             {
                 _list = list;
-                _index = 0;
                 _version = list._version;
-                _current = default;
             }
 
             public void Dispose()
@@ -1207,24 +1204,20 @@ namespace System.Collections.Generic
             {
                 List<T> localList = _list;
 
-                if (_version == localList._version && ((uint)_index < (uint)localList._size))
-                {
-                    _current = localList._items[_index];
-                    _index++;
-                    return true;
-                }
-                return MoveNextRare();
-            }
-
-            private bool MoveNextRare()
-            {
                 if (_version != _list._version)
                 {
                     ThrowHelper.ThrowInvalidOperationException_InvalidOperation_EnumFailedVersion();
                 }
 
-                _index = _list._size + 1;
+                if ((uint)_index < (uint)localList._size)
+                {
+                    _current = localList._items[_index];
+                    _index++;
+                    return true;
+                }
+
                 _current = default;
+                _index = -1;
                 return false;
             }
 
@@ -1234,11 +1227,12 @@ namespace System.Collections.Generic
             {
                 get
                 {
-                    if (_index == 0 || _index == _list._size + 1)
+                    if (_index <= 0)
                     {
                         ThrowHelper.ThrowInvalidOperationException_InvalidOperation_EnumOpCantHappen();
                     }
-                    return Current;
+
+                    return _current;
                 }
             }
 

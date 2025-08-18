@@ -6,13 +6,13 @@ using System.Collections.Generic;
 
 namespace Microsoft.Extensions.DependencyModel.Resolution
 {
-    public class CompositeCompilationAssemblyResolver: ICompilationAssemblyResolver
+    public class CompositeCompilationAssemblyResolver : ICompilationAssemblyResolver
     {
         private readonly ICompilationAssemblyResolver[] _resolvers;
 
         public CompositeCompilationAssemblyResolver(ICompilationAssemblyResolver[] resolvers)
         {
-            ThrowHelper.ThrowIfNull(resolvers);
+            ArgumentNullException.ThrowIfNull(resolvers);
 
             _resolvers = resolvers;
         }

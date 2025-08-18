@@ -10,7 +10,7 @@
 //
 //        Internal.Reflection.Core.Execution has an abstract model
 //        for an "execution engine" - this contract provides the
-//        concrete implementation of this model for Redhawk.
+//        concrete implementation of this model for NativeAOT.
 //
 //
 //      Implemented by:
@@ -18,20 +18,18 @@
 //        N/A on desktop:
 //
 //      Consumed by:
-//        Redhawk app's directly via an under-the-hood ILTransform.
+//        NativeAOT app's directly via an under-the-hood ILTransform.
 //        System.Private.CoreLib.dll, via a callback (see Internal.System.Runtime.Augment)
 //
 
+using global::Internal.Metadata.NativeFormat;
+using global::Internal.Reflection.Core;
+using global::Internal.Reflection.Core.Execution;
+using global::Internal.Runtime.Augments;
 using global::System;
 using global::System.Collections.Generic;
 using global::System.Reflection;
 using global::System.Reflection.Runtime.General;
-
-using global::Internal.Runtime.Augments;
-
-using global::Internal.Reflection.Core;
-using global::Internal.Reflection.Core.Execution;
-using global::Internal.Metadata.NativeFormat;
 
 using Debug = System.Diagnostics.Debug;
 
@@ -94,6 +92,17 @@ namespace Internal.Reflection.Execution
 
             // We don't use the type argument handles as we want the uninstantiated method info
             return ExecutionDomain.GetMethod(declaringTypeHandle, qMethodDefinition, genericMethodTypeArgumentHandles: null);
+        }
+
+        public static MethodBase GetMethodBaseFromOriginalLdftnResult(IntPtr methodStartAddress, RuntimeTypeHandle declaringTypeHandle)
+        {
+            if (!ExecutionEnvironment.TryGetMethodForOriginalLdFtnResult(methodStartAddress,
+                ref declaringTypeHandle, out QMethodDefinition qMethodDefinition, out RuntimeTypeHandle[] genericMethodTypeArgumentHandles))
+            {
+                return null;
+            }
+
+            return ExecutionDomain.GetMethod(declaringTypeHandle, qMethodDefinition, genericMethodTypeArgumentHandles);
         }
 
         internal static ExecutionEnvironmentImplementation ExecutionEnvironment { get; private set; }

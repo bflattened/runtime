@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.Security;
 using System.Xml;
 using System.Xml.XPath;
 using System.Xml.Xsl.Runtime;
 using MS.Internal.Xml.XPath;
-using System.Security;
 
 namespace System.Xml.Xsl.XsltOld
 {
@@ -83,9 +83,8 @@ namespace System.Xml.Xsl.XsltOld
         private readonly Hashtable _attributeSetTable = new Hashtable();
         private readonly Hashtable _decimalFormatTable = new Hashtable();
         private List<Key>? _keyList;
-        private XsltOutput? _output;
 
-        internal XsltOutput Output => _output ??= new XsltOutput();
+        internal XsltOutput Output => field ??= new XsltOutput();
 
         /*
          * Compile

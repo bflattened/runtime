@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.NET.HostModel.Bundle;
 
 namespace Microsoft.DotNet.CoreSetup.Test
@@ -29,12 +30,20 @@ namespace Microsoft.DotNet.CoreSetup.Test
             PopulateBuiltAppDirectory();
         }
 
+        private SingleFileTestApp(SingleFileTestApp source)
+            : base(source)
+        {
+            AppName = source.AppName;
+            selfContained = source.selfContained;
+            builtApp = new TestApp(Path.Combine(Location, "builtApp"), AppName);
+        }
+
         /// <summary>
         /// Create a framework-dependent single-file test app from pre-built output of <paramref name="appName"/>.
         /// </summary>
         /// <param name="appName">Name of pre-built app</param>
         /// <returns>
-        /// The <paramref name="appName"/> is expected to be in <see cref="RepoDirectoriesProvider.TestAssetsFolder"/>
+        /// The <paramref name="appName"/> is expected to be in <see cref="TestContext.TestAssetsOutput"/>
         /// and have been built as framework-dependent
         /// </returns>
         public static SingleFileTestApp CreateFrameworkDependent(string appName)
@@ -45,7 +54,7 @@ namespace Microsoft.DotNet.CoreSetup.Test
         /// </summary>
         /// <param name="appName">Name of pre-built app</param>
         /// <returns>
-        /// The <paramref name="appName"/> is expected to be in <see cref="RepoDirectoriesProvider.TestAssetsFolder"/>
+        /// The <paramref name="appName"/> is expected to be in <see cref="TestContext.TestAssetsOutput"/>
         /// and have been built as framework-dependent
         /// </returns>
         public static SingleFileTestApp CreateSelfContained(string appName)
@@ -73,6 +82,8 @@ namespace Microsoft.DotNet.CoreSetup.Test
             return fileSpecs;
         }
 
+        public SingleFileTestApp Copy() => new SingleFileTestApp(this);
+
         public string Bundle(BundleOptions options = BundleOptions.None, Version? bundleVersion = null)
         {
             return Bundle(options, out _, bundleVersion);
@@ -80,13 +91,31 @@ namespace Microsoft.DotNet.CoreSetup.Test
 
         public string Bundle(BundleOptions options, out Manifest manifest, Version? bundleVersion = null)
         {
-            string bundleDirectory = SharedFramework.CalculateUniqueTestDirectory(Path.Combine(Location, "bundle"));
+            string bundleDirectory = GetUniqueSubdirectory("bundle");
+            return Bundle(options, bundleDirectory, out manifest, bundleVersion);
+        }
+
+        public string Rebundle(string bundleDirectory, BundleOptions options, out Manifest manifest, Version? bundleVersion = null)
+        {
+            // Reuse the existing bundle directory if it exists
+            if (!Directory.Exists(bundleDirectory))
+            {
+                throw new InvalidOperationException(
+                    $"The bundle directory '{bundleDirectory}' does not exist. " +
+                    "Please ensure the directory is created before rebundling.");
+            }
+
+            return Bundle(options, bundleDirectory, out manifest, bundleVersion);
+        }
+
+        private string Bundle(BundleOptions options, string bundleDirectory, out Manifest manifest, Version? bundleVersion = null)
+        {
             var bundler = new Bundler(
-                Binaries.GetExeFileNameForCurrentPlatform(AppName),
+                Binaries.GetExeName(AppName),
                 bundleDirectory,
                 options,
                 targetFrameworkVersion: bundleVersion,
-                macosCodesign: true);
+                macosCodesign: RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
 
             // Get all files in the source directory and all sub-directories.
             string[] sources = Directory.GetFiles(builtApp.Location, searchPattern: "*", searchOption: SearchOption.AllDirectories);
@@ -124,7 +153,7 @@ namespace Microsoft.DotNet.CoreSetup.Test
 
         public string GetNewExtractionRootPath()
         {
-            return SharedFramework.CalculateUniqueTestDirectory(Path.Combine(Location, "extract"));
+            return GetUniqueSubdirectory("extract");
         }
 
         public DirectoryInfo GetExtractionDir(string root, Manifest manifest)
@@ -132,27 +161,39 @@ namespace Microsoft.DotNet.CoreSetup.Test
             return new DirectoryInfo(Path.Combine(root, Name, manifest.BundleID));
         }
 
+        public void CreateAppHost(bool isWindowsGui = false, bool copyResources = true, bool disableCetCompat = false)
+        {
+            if (selfContained)
+            {
+                builtApp.CreateSingleFileHost(isWindowsGui, copyResources, disableCetCompat);
+            }
+            else
+            {
+                builtApp.CreateAppHost(isWindowsGui, copyResources, disableCetCompat);
+            }
+        }
+
         private void PopulateBuiltAppDirectory()
         {
             // Copy the compiled app output - the app is expected to have been built as framework-dependent
             TestArtifact.CopyRecursive(
-                Path.Combine(RepoDirectoriesProvider.Default.TestAssetsOutput, AppName),
+                Path.Combine(TestContext.TestAssetsOutput, AppName),
                 builtApp.Location);
 
             // Remove any runtimeconfig.json or deps.json - we will be creating new ones
             File.Delete(builtApp.RuntimeConfigJson);
             File.Delete(builtApp.DepsJson);
 
-            var shortVersion = RepoDirectoriesProvider.Default.Tfm[3..]; // trim "net" from beginning
-            var builder = NetCoreAppBuilder.ForNETCoreApp(AppName, RepoDirectoriesProvider.Default.TargetRID, shortVersion);
+            var shortVersion = TestContext.Tfm[3..]; // trim "net" from beginning
+            var builder = NetCoreAppBuilder.ForNETCoreApp(AppName, TestContext.BuildRID, shortVersion);
 
             // Update the .runtimeconfig.json
             builder.WithRuntimeConfig(c =>
             {
-                c.WithTfm(RepoDirectoriesProvider.Default.Tfm);
+                c.WithTfm(TestContext.Tfm);
                 c = selfContained
-                    ? c.WithIncludedFramework(Constants.MicrosoftNETCoreApp, RepoDirectoriesProvider.Default.MicrosoftNETCoreAppVersion)
-                    : c.WithFramework(Constants.MicrosoftNETCoreApp, RepoDirectoriesProvider.Default.MicrosoftNETCoreAppVersion);
+                    ? c.WithIncludedFramework(Constants.MicrosoftNETCoreApp, TestContext.MicrosoftNETCoreAppVersion)
+                    : c.WithFramework(Constants.MicrosoftNETCoreApp, TestContext.MicrosoftNETCoreAppVersion);
             });
 
             // Add runtime libraries and assets for generating the .deps.json.
@@ -164,7 +205,7 @@ namespace Microsoft.DotNet.CoreSetup.Test
                     .WithAsset(Path.GetFileName(builtApp.AppDll), f => f.NotOnDisk())));
             if (selfContained)
             {
-                builder.WithRuntimePack($"{Constants.MicrosoftNETCoreApp}.Runtime.{RepoDirectoriesProvider.Default.TargetRID}", RepoDirectoriesProvider.Default.MicrosoftNETCoreAppVersion, l => l
+                builder.WithRuntimePack($"{Constants.MicrosoftNETCoreApp}.Runtime.{TestContext.BuildRID}", TestContext.MicrosoftNETCoreAppVersion, l => l
                     .WithAssemblyGroup(string.Empty, g =>
                     {
                         foreach (var file in Binaries.GetRuntimeFiles().Assemblies)
@@ -182,14 +223,7 @@ namespace Microsoft.DotNet.CoreSetup.Test
             builder.Build(builtApp);
 
             // Create the apphost for the app
-            if (selfContained)
-            {
-                builtApp.CreateSingleFileHost();
-            }
-            else
-            {
-                builtApp.CreateAppHost();
-            }
+            CreateAppHost();
         }
     }
 }

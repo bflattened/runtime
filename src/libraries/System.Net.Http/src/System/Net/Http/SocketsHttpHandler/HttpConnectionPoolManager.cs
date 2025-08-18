@@ -5,10 +5,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.NetworkInformation;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net.NetworkInformation;
 
 namespace System.Net.Http
 {
@@ -69,10 +69,13 @@ namespace System.Net.Http
             // However, we can only do such optimizations if we're not also tracking
             // connections per server, as we use data in the associated data structures
             // to do that tracking.
+            // Additionally, we should not avoid storing connections if keep-alive ping is configured,
+            // as the heartbeat timer is needed for ping functionality.
             bool avoidStoringConnections =
                 settings._maxConnectionsPerServer == int.MaxValue &&
                 (settings._pooledConnectionIdleTimeout == TimeSpan.Zero ||
-                 settings._pooledConnectionLifetime == TimeSpan.Zero);
+                 settings._pooledConnectionLifetime == TimeSpan.Zero) &&
+                settings._keepAlivePingDelay == Timeout.InfiniteTimeSpan;
 
             // Start out with the timer not running, since we have no pools.
             // When it does run, run it with a frequency based on the idle timeout.
@@ -174,9 +177,29 @@ namespace System.Net.Http
                 return;
             }
 
-            using (ExecutionContext.SuppressFlow())
+            // RFC: https://tools.ietf.org/html/rfc7838#section-2.2
+            //    When alternative services are used to send a client to the most
+            //    optimal server, a change in network configuration can result in
+            //    cached values becoming suboptimal.  Therefore, clients SHOULD remove
+            //    from cache all alternative services that lack the "persist" flag with
+            //    the value "1" when they detect such a change, when information about
+            //    network state is available.
+            try
             {
-                NetworkChange.NetworkAddressChanged += networkChangedDelegate;
+                using (ExecutionContext.SuppressFlow())
+                {
+                    NetworkChange.NetworkAddressChanged += networkChangedDelegate;
+                }
+            }
+            catch (NetworkInformationException e)
+            {
+                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Exception when subscribing to NetworkChange.NetworkAddressChanged: {e}");
+
+                // We can't monitor network changes, so technically "information
+                // about network state is not available" and we can just keep
+                // all Alt-Svc entries until their expiration time.
+                //
+                // keep the _networkChangeCleanup field assigned so we don't try again needlessly
             }
         }
 
@@ -204,35 +227,6 @@ namespace System.Net.Http
         public HttpConnectionSettings Settings => _settings;
         public ICredentials? ProxyCredentials => _proxyCredentials;
 
-        private static string ParseHostNameFromHeader(string hostHeader)
-        {
-            // See if we need to trim off a port.
-            int colonPos = hostHeader.IndexOf(':');
-            if (colonPos >= 0)
-            {
-                // There is colon, which could either be a port separator or a separator in
-                // an IPv6 address.  See if this is an IPv6 address; if it's not, use everything
-                // before the colon as the host name, and if it is, use everything before the last
-                // colon iff the last colon is after the end of the IPv6 address (otherwise it's a
-                // part of the address).
-                int ipV6AddressEnd = hostHeader.IndexOf(']');
-                if (ipV6AddressEnd == -1)
-                {
-                    return hostHeader.Substring(0, colonPos);
-                }
-                else
-                {
-                    colonPos = hostHeader.LastIndexOf(':');
-                    if (colonPos > ipV6AddressEnd)
-                    {
-                        return hostHeader.Substring(0, colonPos);
-                    }
-                }
-            }
-
-            return hostHeader;
-        }
-
         private HttpConnectionKey GetConnectionKey(HttpRequestMessage request, Uri? proxyUri, bool isProxyConnect)
         {
             Uri? uri = request.RequestUri;
@@ -250,7 +244,7 @@ namespace System.Net.Http
                 string? hostHeader = request.Headers.Host;
                 if (hostHeader != null)
                 {
-                    sslHostName = ParseHostNameFromHeader(hostHeader);
+                    sslHostName = HttpUtilities.ParseHostNameFromHeader(hostHeader);
                 }
                 else
                 {
@@ -307,6 +301,34 @@ namespace System.Net.Http
             }
         }
 
+        // Picks the value of the 'server.address' tag following rules specified in
+        // https://github.com/open-telemetry/semantic-conventions/blob/728e5d1/docs/http/http-spans.md#http-client-span
+        // When there is no proxy, we need to prioritize the contents of the Host header.
+        private static string? GetTelemetryServerAddress(HttpRequestMessage request, HttpConnectionKey key)
+        {
+            if (GlobalHttpSettings.MetricsHandler.IsGloballyEnabled || GlobalHttpSettings.DiagnosticsHandler.EnableActivityPropagation)
+            {
+                Uri? uri = request.RequestUri;
+                Debug.Assert(uri is not null);
+
+                if (key.SslHostName is not null)
+                {
+                    return key.SslHostName;
+                }
+
+                if (key.ProxyUri is not null && key.Kind == HttpConnectionKind.Proxy)
+                {
+                    // In case there is no tunnel, return the proxy address since the connection is shared.
+                    return key.ProxyUri.IdnHost;
+                }
+
+                string? hostHeader = request.Headers.Host;
+                return hostHeader is null ? uri.IdnHost : HttpUtilities.ParseHostNameFromHeader(hostHeader);
+            }
+
+            return null;
+        }
+
         public ValueTask<HttpResponseMessage> SendAsyncCore(HttpRequestMessage request, Uri? proxyUri, bool async, bool doRequestAuth, bool isProxyConnect, CancellationToken cancellationToken)
         {
             HttpConnectionKey key = GetConnectionKey(request, proxyUri, isProxyConnect);
@@ -314,7 +336,7 @@ namespace System.Net.Http
             HttpConnectionPool? pool;
             while (!_pools.TryGetValue(key, out pool))
             {
-                pool = new HttpConnectionPool(this, key.Kind, key.Host, key.Port, key.SslHostName, key.ProxyUri);
+                pool = new HttpConnectionPool(this, key.Kind, key.Host, key.Port, key.SslHostName, key.ProxyUri, GetTelemetryServerAddress(request, key));
 
                 if (_cleaningTimer == null)
                 {

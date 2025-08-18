@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Composition.Diagnostics;
 using System.ComponentModel.Composition.Primitives;
 using System.ComponentModel.Composition.ReflectionModel;
+using System.Composition.Diagnostics;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -509,15 +509,8 @@ namespace System.ComponentModel.Composition.Hosting
         {
             ThrowIfDisposed();
             EnsureRunning();
-            if (part == null)
-            {
-                throw new ArgumentNullException(nameof(part));
-            }
-
-            if (export == null)
-            {
-                throw new ArgumentNullException(nameof(export));
-            }
+            ArgumentNullException.ThrowIfNull(part);
+            ArgumentNullException.ThrowIfNull(export);
 
             // We don't protect against thread racing here, as "importsSatisfied" is merely an optimization
             // if two threads satisfy imports twice, the results is the same, just the perf hit is heavier.
@@ -1025,7 +1018,7 @@ namespace System.ComponentModel.Composition.Hosting
             {
                 Part = part;
             }
-            public ComposablePart Part { get; private set; }
+            public ComposablePart Part { get; }
 
             public bool ImportsSatisfied
             {

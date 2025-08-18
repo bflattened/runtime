@@ -11,6 +11,7 @@ include(CheckLibraryExists)
 check_include_files(sys/time.h HAVE_SYS_TIME_H)
 check_include_files(sys/mman.h HAVE_SYS_MMAN_H)
 check_include_files(pthread_np.h HAVE_PTHREAD_NP_H)
+check_include_files(sys/membarrier.h HAVE_SYS_MEMBARRIER_H)
 
 check_function_exists(vm_allocate HAVE_VM_ALLOCATE)
 check_function_exists(sysctlbyname HAVE_SYSCTLBYNAME)
@@ -87,20 +88,6 @@ check_symbol_exists(
     clock_gettime_nsec_np
     time.h
     HAVE_CLOCK_GETTIME_NSEC_NP)
-
-check_cxx_source_runs("
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
-
-int main()
-{
-  int ret;
-  struct timespec ts;
-  ret = clock_gettime(CLOCK_MONOTONIC, &ts);
-
-  exit(ret);
-}" HAVE_CLOCK_MONOTONIC)
 
 check_symbol_exists(
     posix_madvise
@@ -183,5 +170,22 @@ check_prototype_definition(
     0
     ${STATFS_INCLUDES}
     HAVE_NON_LEGACY_STATFS)
+
+set(CMAKE_REQUIRED_LIBRARIES)
+check_cxx_source_runs("
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+int main(void) {
+  int fd;
+
+  fd = open(\"/proc/self/statm\", O_RDONLY);
+  if (fd == -1) {
+    exit(1);
+  }
+  exit(0);
+}" HAVE_PROCFS_STATM)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/config.gc.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.gc.h)

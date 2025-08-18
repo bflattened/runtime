@@ -4,15 +4,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Xml;
-using System.Xml.XPath;
-using System.Xml.Schema;
-using System.Globalization;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.XPath;
 using System.Xml.Xsl.Runtime;
-using System.Diagnostics.CodeAnalysis;
 
 namespace System.Xml.Xsl.IlGen
 {
@@ -94,6 +94,7 @@ namespace System.Xml.Xsl.IlGen
         /// <summary>
         /// Create a StorageDescriptor for an item located in a local variable.
         /// </summary>
+        [RequiresDynamicCode("Calls System.Type.MakeGenericType")]
         public static StorageDescriptor Local(LocalBuilder loc, Type itemStorageType, bool isCached)
         {
             Debug.Assert(loc.LocalType == itemStorageType ||
@@ -126,6 +127,7 @@ namespace System.Xml.Xsl.IlGen
         /// <summary>
         /// Create a StorageDescriptor for an item located in a global variable.
         /// </summary>
+        [RequiresDynamicCode("Calls System.Type.MakeGenericType")]
         public static StorageDescriptor Global(MethodInfo methGlobal, Type itemStorageType, bool isCached)
         {
             Debug.Assert(methGlobal.ReturnType == itemStorageType ||
@@ -156,6 +158,7 @@ namespace System.Xml.Xsl.IlGen
         /// <summary>
         /// Create a StorageDescriptor for an item located in a local variable.
         /// </summary>
+        [RequiresDynamicCode("Calls StorageDescriptor.Local")]
         public StorageDescriptor ToLocal(LocalBuilder loc)
         {
             return Local(loc, _itemStorageType, _isCached);

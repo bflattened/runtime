@@ -29,6 +29,7 @@ namespace System.Security.Cryptography.X509Certificates
                 publicKey = Interop.AppleCrypto.ImportEphemeralKey(_certData.SubjectPublicKeyInfo, false);
             }
 
+            privateKey.SetParentHandle(_certHandle);
             return new DSAImplementation.DSASecurityTransforms(publicKey, privateKey);
         }
 
@@ -119,6 +120,12 @@ namespace System.Security.Cryptography.X509Certificates
             {
                 return CopyWithPrivateKey(privateSecKey);
             }
+        }
+
+        public ICertificatePal CopyWithPrivateKey(MLDsa privateKey)
+        {
+            throw new PlatformNotSupportedException(
+                SR.Format(SR.Cryptography_AlgorithmNotSupported, nameof(MLDsa)));
         }
 
         public ICertificatePal CopyWithPrivateKey(RSA privateKey)

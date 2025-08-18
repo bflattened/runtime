@@ -161,7 +161,7 @@ namespace System.Text
             int remaining = _pos - index;
             _chars.Slice(index, remaining).CopyTo(_chars.Slice(index + count));
             s
-#if !NETCOREAPP
+#if !NET
                 .AsSpan()
 #endif
                 .CopyTo(_chars.Slice(index));
@@ -213,7 +213,7 @@ namespace System.Text
             }
 
             s
-#if !NETCOREAPP
+#if !NET
                 .AsSpan()
 #endif
                 .CopyTo(_chars.Slice(pos));
@@ -233,22 +233,6 @@ namespace System.Text
                 dst[i] = c;
             }
             _pos += count;
-        }
-
-        public unsafe void Append(char* value, int length)
-        {
-            int pos = _pos;
-            if (pos > _chars.Length - length)
-            {
-                Grow(length);
-            }
-
-            Span<char> dst = _chars.Slice(_pos, length);
-            for (int i = 0; i < dst.Length; i++)
-            {
-                dst[i] = *value++;
-            }
-            _pos += length;
         }
 
         public void Append(scoped ReadOnlySpan<char> value)

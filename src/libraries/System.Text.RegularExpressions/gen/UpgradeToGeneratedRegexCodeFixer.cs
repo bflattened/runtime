@@ -34,7 +34,7 @@ namespace System.Text.RegularExpressions.Generator
         /// <inheritdoc />
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticDescriptors.UseRegexSourceGeneration.Id);
 
-        private static readonly char[] s_comma = new[] { ',' };
+        private static readonly char[] s_comma = [','];
 
         public override FixAllProvider? GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -222,9 +222,9 @@ namespace System.Text.RegularExpressions.Generator
             // Generate the GeneratedRegex attribute syntax node with the specified parameters.
             SyntaxNode attributes = generator.Attribute(generator.TypeExpression(generatedRegexAttributeSymbol), attributeArguments: (patternValue, regexOptionsValue, cultureNameValue) switch
             {
-                ({ }, null, null) => new[] { patternValue },
-                ({ }, { }, null) => new[] { patternValue, regexOptionsValue },
-                ({ }, { }, { }) => new[] { patternValue, regexOptionsValue, cultureNameValue },
+                ({ }, null, null) => [patternValue],
+                ({ }, { }, null) => [patternValue, regexOptionsValue],
+                ({ }, { }, { }) => [patternValue, regexOptionsValue, cultureNameValue],
                 _ => Array.Empty<SyntaxNode>(),
             });
 
@@ -281,28 +281,35 @@ namespace System.Text.RegularExpressions.Generator
                     return null;
                 }
 
-                Debug.Assert(parameterName is UpgradeToGeneratedRegexAnalyzer.OptionsArgumentName or UpgradeToGeneratedRegexAnalyzer.PatternArgumentName);
-                if (parameterName == UpgradeToGeneratedRegexAnalyzer.OptionsArgumentName)
+                // Literals and class-level field references should be preserved as-is.
+                if (argument.Value is ILiteralOperation ||
+                    argument.Value is IFieldReferenceOperation { Member: IFieldSymbol { IsConst: true } })
                 {
-                    string optionsLiteral = Literal(((RegexOptions)(int)argument.Value.ConstantValue.Value!).ToString());
-                    return SyntaxFactory.ParseExpression(optionsLiteral);
+                    return argument.Value.Syntax;
                 }
-                else if (argument.Value is ILiteralOperation literalOperation)
+
+                switch (parameterName)
                 {
-                    return literalOperation.Syntax;
-                }
-                else if (argument.Value is IFieldReferenceOperation fieldReferenceOperation &&
-                    fieldReferenceOperation.Member is IFieldSymbol fieldSymbol && fieldSymbol.IsConst)
-                {
-                    return generator.Argument(fieldReferenceOperation.Syntax);
-                }
-                else if (argument.Value.ConstantValue.Value is string str && str.Contains('\\'))
-                {
-                    return SyntaxFactory.ParseExpression($"@\"{str}\"");
-                }
-                else
-                {
-                    return generator.LiteralExpression(argument.Value.ConstantValue.Value);
+                    case UpgradeToGeneratedRegexAnalyzer.OptionsArgumentName:
+                        string optionsLiteral = Literal(((RegexOptions)(int)argument.Value.ConstantValue.Value!).ToString());
+                        return SyntaxFactory.ParseExpression(optionsLiteral);
+
+                    case UpgradeToGeneratedRegexAnalyzer.PatternArgumentName:
+                        if (argument.Value.ConstantValue.Value is string str && str.Contains('\\'))
+                        {
+                            // Special handling for string patterns with escaped characters
+                            string escapedVerbatimText = str.Replace("\"", "\"\"");
+                            return SyntaxFactory.ParseExpression($"@\"{escapedVerbatimText}\"");
+                        }
+                        else
+                        {
+                            // Default handling for all other patterns.
+                            return generator.LiteralExpression(argument.Value.ConstantValue.Value);
+                        }
+
+                    default:
+                        Debug.Fail($"Unknown parameter: {parameterName}");
+                        return argument.Syntax;
                 }
             }
 

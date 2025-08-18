@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Threading;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using Internal.Runtime;
 using Internal.Runtime.CompilerHelpers;
@@ -45,7 +45,8 @@ namespace System.Runtime.CompilerServices
         private static unsafe object CheckStaticClassConstructionReturnThreadStaticBase(TypeManagerSlot* pModuleData, int typeTlsIndex, StaticClassConstructionContext* context)
         {
             object threadStaticBase = ThreadStatics.GetThreadStaticBaseForType(pModuleData, typeTlsIndex);
-            EnsureClassConstructorRun(context);
+            if (context->cctorMethodAddress != 0)
+                EnsureClassConstructorRun(context);
             return threadStaticBase;
         }
 
@@ -54,7 +55,7 @@ namespace System.Runtime.CompilerServices
             IntPtr pfnCctor = pContext->cctorMethodAddress;
             NoisyLog("EnsureClassConstructorRun, context={0}, thread={1}", pContext, CurrentManagedThreadId);
 
-            // If we were called from MRT, this check is redundant but harmless. This is in case someone within classlib
+            // If we were called from JIT helper, this check is redundant but harmless. This is in case someone within classlib
             // (cough, Reflection) needs to call this explicitly.
             if (pfnCctor == 0)
             {
@@ -86,13 +87,6 @@ namespace System.Runtime.CompilerServices
                                 NoisyLog("Calling cctor, context={0}, thread={1}", pContext, currentManagedThreadId);
 
                                 ((delegate*<void>)pfnCctor)();
-
-                                // Insert a memory barrier here to order any writes executed as part of static class
-                                // construction above with respect to the initialized flag update we're about to make
-                                // below. This is important since the fast path for checking the cctor uses a normal read
-                                // and doesn't come here so without the barrier it could observe initialized == 1 but
-                                // still see uninitialized static fields on the class.
-                                Interlocked.MemoryBarrier();
 
                                 NoisyLog("Set type inited, context={0}, thread={1}", pContext, currentManagedThreadId);
 
@@ -162,7 +156,7 @@ namespace System.Runtime.CompilerServices
                 // If the threads are deadlocked for any reason other a class constructor cycling, this loop will never
                 // terminate - this is by design. If the user code inside the class constructors were to
                 // deadlock themselves, then that's a bug in user code.
-                for (;;)
+                for (; ; )
                 {
                     using (s_cctorGlobalLock.EnterScope())
                     {
@@ -275,7 +269,7 @@ namespace System.Runtime.CompilerServices
 #if TARGET_WASM
                 if (s_cctorGlobalLock == null)
                 {
-                    Interlocked.CompareExchange(ref s_cctorGlobalLock, new Lock(), null);
+                    Interlocked.CompareExchange(ref s_cctorGlobalLock, new Lock(useTrivialWaits: true), null);
                 }
                 if (s_cctorArrays == null)
                 {
@@ -342,7 +336,7 @@ namespace System.Runtime.CompilerServices
 
                         Debug.Assert(resultArray[resultIndex]._pContext == default(StaticClassConstructionContext*));
                         resultArray[resultIndex]._pContext = pContext;
-                        resultArray[resultIndex].Lock = new Lock();
+                        resultArray[resultIndex].Lock = new Lock(useTrivialWaits: true);
                         s_count++;
                     }
 
@@ -489,7 +483,7 @@ namespace System.Runtime.CompilerServices
         internal static void Initialize()
         {
             s_cctorArrays = new Cctor[10][];
-            s_cctorGlobalLock = new Lock();
+            s_cctorGlobalLock = new Lock(useTrivialWaits: true);
         }
 
         [Conditional("ENABLE_NOISY_CCTOR_LOG")]

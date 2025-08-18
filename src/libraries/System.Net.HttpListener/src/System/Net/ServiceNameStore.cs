@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Security.Authentication.ExtendedProtection;
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Authentication.ExtendedProtection;
 
 namespace System.Net
 {
@@ -272,7 +272,7 @@ namespace System.Net
 
             if (hostname == "*" ||
                 hostname == "+" ||
-                IPAddress.TryParse(hostname, out _))
+                IPAddress.IsValid(hostname))
             {
                 // for a wildcard, register the machine name.  If the caller doesn't have DNS permission
                 // or the query fails for some reason, don't add an SPN.

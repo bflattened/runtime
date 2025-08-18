@@ -1,18 +1,19 @@
 [CmdletBinding(PositionalBinding=$false)]
 Param(
   [switch][Alias('h')]$help,
+  [switch]$pack,
   [switch][Alias('t')]$test,
   [ValidateSet("Debug","Release","Checked")][string[]][Alias('c')]$configuration = @("Debug"),
   [string][Alias('f')]$framework,
   [string]$vs,
   [string][Alias('v')]$verbosity = "minimal",
   [ValidateSet("windows","linux","osx","android","browser","wasi")][string]$os,
-  [switch]$allconfigurations,
   [switch]$coverage,
   [string]$testscope,
   [switch]$testnobuild,
-  [ValidateSet("x86","x64","arm","arm64","wasm")][string[]][Alias('a')]$arch = @([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant()),
-  [Parameter(Position=0)][string][Alias('s')]$subset,
+  [ValidateSet("x86","x64","arm","arm64","wasm")][string[]][Alias('a')]$arch = @([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()),
+  [switch]$cross = $false,
+  [string][Alias('s')]$subset,
   [ValidateSet("Debug","Release","Checked")][string][Alias('rc')]$runtimeConfiguration,
   [ValidateSet("Debug","Release")][string][Alias('lc')]$librariesConfiguration,
   [ValidateSet("CoreCLR","Mono")][string][Alias('rf')]$runtimeFlavor,
@@ -76,10 +77,9 @@ function Get-Help() {
   Write-Host ""
 
   Write-Host "Libraries settings:"
-  Write-Host "  -allconfigurations      Build packages for all build configurations."
   Write-Host "  -coverage               Collect code coverage when testing."
-  Write-Host "  -framework (-f)         Build framework: net9.0 or net48."
-  Write-Host "                          [Default: net9.0]"
+  Write-Host "  -framework (-f)         Build framework: net10.0 or net481."
+  Write-Host "                          [Default: net10.0]"
   Write-Host "  -testnobuild            Skip building tests when invoking -test."
   Write-Host "  -testscope              Scope tests, allowed values: innerloop, outerloop, all."
   Write-Host ""
@@ -130,14 +130,41 @@ if ($help) {
   exit 0
 }
 
+# check the first argument if subset is not explicitly passed in
+if (-not $PSBoundParameters.ContainsKey("subset") -and $properties.Length -gt 0 -and $properties[0] -match '^[a-zA-Z\.\+]+$') {
+  $subset = $properties[0]
+  $PSBoundParameters.Add("subset", $subset)
+  $properties = $properties | Select-Object -Skip 1
+}
+
 if ($subset -eq 'help') {
-  Invoke-Expression "& `"$PSScriptRoot/common/build.ps1`" -restore -build /p:subset=help /clp:nosummary"
+  Invoke-Expression "& `"$PSScriptRoot/common/build.ps1`" -restore -build /p:subset=help /clp:nosummary /tl:false"
   exit 0
 }
 
 # Lower-case the passed in OS string.
 if ($os) {
   $os = $os.ToLowerInvariant()
+}
+
+if ($os -eq "browser") {
+  # override default arch for Browser, we only support wasm
+  $arch = "wasm"
+
+  if ($msbuild -eq $True) {
+    Write-Error "Using the -msbuild option isn't supported when building for Browser on Windows, we need need ninja for Emscripten."
+    exit 1
+  }
+}
+
+if ($os -eq "wasi") {
+  # override default arch for wasi, we only support wasm
+  $arch = "wasm"
+
+  if ($msbuild -eq $True) {
+    Write-Error "Using the -msbuild option isn't supported when building for WASI on Windows, we need ninja for WASI-SDK."
+    exit 1
+  }
 }
 
 if ($vs) {
@@ -148,12 +175,13 @@ if ($vs) {
     $configToOpen = $runtimeConfiguration
   }
 
-  if ($vs -ieq "coreclr.sln") {
-    # If someone passes in coreclr.sln (case-insensitive),
+  # Auto-generated solution file that still uses the sln format 
+  if ($vs -ieq "coreclr.sln" -or $vs -ieq "coreclr") {
+    # If someone passes in coreclr.sln or just coreclr (case-insensitive),
     # launch the generated CMake solution.
     $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "artifacts\obj\coreclr" | Join-Path -ChildPath "windows.$archToOpen.$((Get-Culture).TextInfo.ToTitleCase($configToOpen))" | Join-Path -ChildPath "ide" | Join-Path -ChildPath "CoreCLR.sln"
     if (-Not (Test-Path $vs)) {
-      Invoke-Expression "& `"$repoRoot/src/coreclr/build-runtime.cmd`" -configureonly -$archToOpen -$configToOpen -msbuild"
+      Invoke-Expression "& `"$repoRoot/eng/common/msbuild.ps1`" $repoRoot/src/coreclr/runtime.proj /clp:nosummary /restore /p:Ninja=false /p:Configuration=$configToOpen /p:TargetArchitecture=$archToOpen /p:ConfigureOnly=true /p:ClrFullNativeBuild=true"
       if ($lastExitCode -ne 0) {
         Write-Error "Failed to generate the CoreCLR solution file."
         exit 1
@@ -163,7 +191,8 @@ if ($vs) {
       }
     }
   }
-  elseif ($vs -ieq "corehost.sln") {
+  # Auto-generated solution file that still uses the sln format
+  elseif ($vs -ieq "corehost.sln" -or $vs -ieq "corehost") {
     $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "artifacts\obj\" | Join-Path -ChildPath "win-$archToOpen.$((Get-Culture).TextInfo.ToTitleCase($configToOpen))" | Join-Path -ChildPath "corehost" | Join-Path -ChildPath "ide" | Join-Path -ChildPath "corehost.sln"
     if (-Not (Test-Path $vs)) {
       Invoke-Expression "& `"$repoRoot/eng/common/msbuild.ps1`" $repoRoot/src/native/corehost/corehost.proj /clp:nosummary /restore /p:Ninja=false /p:Configuration=$configToOpen /p:TargetArchitecture=$archToOpen /p:ConfigureOnly=true"
@@ -181,24 +210,29 @@ if ($vs) {
 
     if ($runtimeFlavor -eq "Mono") {
       # Search for the solution in mono
-      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\mono" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.sln"
+      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\mono" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.slnx"
     } else {
       # Search for the solution in coreclr
-      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\coreclr" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.sln"
+      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\coreclr" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.slnx"
+      
+      # Also, search for the solution in coreclr\tools\aot
+      if (-Not (Test-Path $vs)) {
+        $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\coreclr\tools\aot\$solution.slnx"
+      }
     }
 
     if (-Not (Test-Path $vs)) {
       $vs = $solution
 
       # Search for the solution in libraries
-      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\libraries" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.sln"
+      $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\libraries" | Join-Path -ChildPath $vs | Join-Path -ChildPath "$vs.slnx"
 
       if (-Not (Test-Path $vs)) {
         $vs = $solution
 
         # Search for the solution in installer
-        if (-Not ($vs.endswith(".sln"))) {
-          $vs = "$vs.sln"
+        if (-Not ($vs.endswith(".slnx"))) {
+          $vs = "$vs.slnx"
         }
 
         $vs = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "src\installer" | Join-Path -ChildPath $vs
@@ -228,10 +262,32 @@ if ($vs) {
   # Disable .NET runtime signature validation errors which errors for local builds
   $env:VSDebugger_ValidateDotnetDebugLibSignatures=0;
 
+  # Respect the RuntimeConfiguration variable for building inside VS with different runtime configurations
   if ($runtimeConfiguration)
   {
-    # Respect the RuntimeConfiguration variable for building inside VS with different runtime configurations
     $env:RUNTIMECONFIGURATION=$runtimeConfiguration
+  }
+
+  if ($librariesConfiguration)
+  {
+    # Respect the LibrariesConfiguration variable for building inside VS with different libraries configurations
+    $env:LIBRARIESCONFIGURATION=$librariesConfiguration
+  }
+
+  # Respect the RuntimeFlavor variable for building inside VS with a different CoreLib and runtime
+  if ($runtimeFlavor)
+  {
+    $env:RUNTIMEFLAVOR=$runtimeFlavor
+  }
+
+  # Respect the TargetOS variable for building non AnyOS libraries
+  if ($os) {
+    $env:TARGETOS=$os
+  }
+
+  # Respect the TargetArchitecture variable for building non AnyCPU libraries
+  if ($arch) {
+    $env:TARGETARCHITECTURE=$arch
   }
 
   # Launch Visual Studio with the locally defined environment variables
@@ -262,7 +318,7 @@ foreach ($argument in $PSBoundParameters.Keys)
     "hostConfiguration"      { $arguments += " /p:HostConfiguration=$((Get-Culture).TextInfo.ToTitleCase($($PSBoundParameters[$argument])))" }
     "framework"              { $arguments += " /p:BuildTargetFramework=$($PSBoundParameters[$argument].ToLowerInvariant())" }
     "os"                     { $arguments += " /p:TargetOS=$($PSBoundParameters[$argument])" }
-    "allconfigurations"      { $arguments += " /p:BuildAllConfigurations=true" }
+    "pack"                   { $arguments += " -pack /p:BuildAllConfigurations=true" }
     "properties"             { $arguments += " " + $properties }
     "verbosity"              { $arguments += " -$argument " + $($PSBoundParameters[$argument]) }
     "cmakeargs"              { $arguments += " /p:CMakeArgs=`"$($PSBoundParameters[$argument])`"" }
@@ -279,34 +335,17 @@ foreach ($argument in $PSBoundParameters.Keys)
 }
 
 if ($env:TreatWarningsAsErrors -eq 'false') {
-  $arguments += " -warnAsError 0"
+  $arguments += " -warnAsError `$false"
 }
+
+# disable terminal logger for now: https://github.com/dotnet/runtime/issues/97211
+$arguments += " /tl:false"
 
 # Disable targeting pack caching as we reference a partially constructed targeting pack and update it later.
 # The later changes are ignored when using the cache.
 $env:DOTNETSDK_ALLOW_TARGETING_PACK_CACHING=0
 
 $failedBuilds = @()
-
-if ($os -eq "browser") {
-  # override default arch for Browser, we only support wasm
-  $arch = "wasm"
-
-  if ($msbuild -eq $True) {
-    Write-Error "Using the -msbuild option isn't supported when building for Browser on Windows, we need need ninja for Emscripten."
-    exit 1
-  }
-}
-
-if ($os -eq "wasi") {
-  # override default arch for wasi, we only support wasm
-  $arch = "wasm"
-
-  if ($msbuild -eq $True) {
-    Write-Error "Using the -msbuild option isn't supported when building for WASI on Windows, we need ninja for WASI-SDK."
-    exit 1
-  }
-}
 
 foreach ($config in $configuration) {
   $argumentsWithConfig = $arguments + " -configuration $((Get-Culture).TextInfo.ToTitleCase($config))";

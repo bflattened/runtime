@@ -54,6 +54,18 @@ namespace System
     internal static class ThrowHelper
     {
         [DoesNotReturn]
+        internal static void ThrowUnreachableException()
+        {
+            throw new UnreachableException();
+        }
+
+        [DoesNotReturn]
+        internal static void ThrowArithmeticException(string message)
+        {
+            throw new ArithmeticException(message);
+        }
+
+        [DoesNotReturn]
         internal static void ThrowAccessViolationException()
         {
             throw new AccessViolationException();
@@ -93,6 +105,12 @@ namespace System
         internal static void ThrowArgumentException_InvalidTimeSpanStyles()
         {
             throw new ArgumentException(SR.Argument_InvalidTimeSpanStyles, "styles");
+        }
+
+        [DoesNotReturn]
+        internal static void ThrowArgumentException_InvalidEnumValue<TEnum>(TEnum value, [CallerArgumentExpression(nameof(value))] string argumentName = "")
+        {
+            throw new ArgumentException(SR.Format(SR.Argument_InvalidEnumValue, value, typeof(TEnum).Name), argumentName);
         }
 
         [DoesNotReturn]
@@ -216,6 +234,18 @@ namespace System
         internal static void ThrowArgumentOutOfRange_TimeSpanTooLong()
         {
             throw new ArgumentOutOfRangeException(null, SR.Overflow_TimeSpanTooLong);
+        }
+
+        [DoesNotReturn]
+        internal static void ThrowArgumentOutOfRange_RoundingDigits(string name)
+        {
+            throw new ArgumentOutOfRangeException(name, SR.ArgumentOutOfRange_RoundingDigits);
+        }
+
+        [DoesNotReturn]
+        internal static void ThrowArgumentOutOfRange_RoundingDigits_MathF(string name)
+        {
+            throw new ArgumentOutOfRangeException(name, SR.ArgumentOutOfRange_RoundingDigits_MathF);
         }
 
         [DoesNotReturn]
@@ -579,6 +609,18 @@ namespace System
         }
 
         [DoesNotReturn]
+        internal static void ThrowFormatException_BadHexChar()
+        {
+            throw new FormatException(SR.Format_BadHexChar);
+        }
+
+        [DoesNotReturn]
+        internal static void ThrowFormatException_BadHexLength()
+        {
+            throw new FormatException(SR.Format_BadHexLength);
+        }
+
+        [DoesNotReturn]
         internal static void ThrowFormatException_NeedSingleChar()
         {
             throw new FormatException(SR.Format_NeedSingleChar);
@@ -743,8 +785,6 @@ namespace System
             if (!(default(T) == null) && value == null)
                 ThrowArgumentNullException(argName);
         }
-
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void ThrowForUnsupportedSimdVectorBaseType<TVector, T>()
@@ -962,12 +1002,8 @@ namespace System
                     return "type";
                 case ExceptionArgument.sourceIndex:
                     return "sourceIndex";
-                case ExceptionArgument.sourceArray:
-                    return "sourceArray";
                 case ExceptionArgument.destinationIndex:
                     return "destinationIndex";
-                case ExceptionArgument.destinationArray:
-                    return "destinationArray";
                 case ExceptionArgument.pHandle:
                     return "pHandle";
                 case ExceptionArgument.handle:
@@ -976,8 +1012,6 @@ namespace System
                     return "other";
                 case ExceptionArgument.newSize:
                     return "newSize";
-                case ExceptionArgument.lowerBounds:
-                    return "lowerBounds";
                 case ExceptionArgument.lengths:
                     return "lengths";
                 case ExceptionArgument.len:
@@ -992,12 +1026,6 @@ namespace System
                     return "index2";
                 case ExceptionArgument.index3:
                     return "index3";
-                case ExceptionArgument.length1:
-                    return "length1";
-                case ExceptionArgument.length2:
-                    return "length2";
-                case ExceptionArgument.length3:
-                    return "length3";
                 case ExceptionArgument.endIndex:
                     return "endIndex";
                 case ExceptionArgument.elementType:
@@ -1030,10 +1058,14 @@ namespace System
                     return "overlapped";
                 case ExceptionArgument.minimumBytes:
                     return "minimumBytes";
+                case ExceptionArgument.arrayType:
+                    return "arrayType";
                 case ExceptionArgument.divisor:
                     return "divisor";
                 case ExceptionArgument.factor:
                     return "factor";
+                case ExceptionArgument.set:
+                    return "set";
                 default:
                     Debug.Fail("The enum value is not defined, please check the ExceptionArgument Enum.");
                     return "";
@@ -1212,6 +1244,10 @@ namespace System
                     return SR.Format_UnclosedFormatItem;
                 case ExceptionResource.Format_ExpectedAsciiDigit:
                     return SR.Format_ExpectedAsciiDigit;
+                case ExceptionResource.Argument_HasToBeArrayClass:
+                    return SR.Argument_HasToBeArrayClass;
+                case ExceptionResource.InvalidOperation_IncompatibleComparer:
+                    return SR.InvalidOperation_IncompatibleComparer;
                 default:
                     Debug.Fail("The enum value is not defined, please check the ExceptionResource Enum.");
                     return "";
@@ -1289,14 +1325,11 @@ namespace System
         timeout,
         type,
         sourceIndex,
-        sourceArray,
         destinationIndex,
-        destinationArray,
         pHandle,
         handle,
         other,
         newSize,
-        lowerBounds,
         lengths,
         len,
         keys,
@@ -1304,9 +1337,6 @@ namespace System
         index1,
         index2,
         index3,
-        length1,
-        length2,
-        length3,
         endIndex,
         elementType,
         arrayIndex,
@@ -1323,8 +1353,10 @@ namespace System
         anyOf,
         overlapped,
         minimumBytes,
+        arrayType,
         divisor,
         factor,
+        set,
     }
 
     //
@@ -1410,5 +1442,7 @@ namespace System
         Format_UnexpectedClosingBrace,
         Format_UnclosedFormatItem,
         Format_ExpectedAsciiDigit,
+        Argument_HasToBeArrayClass,
+        InvalidOperation_IncompatibleComparer,
     }
 }

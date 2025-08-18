@@ -4,14 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.InteropServices;
-using System.Reflection;
 using System.Numerics.Hashing;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.CSharp.RuntimeBinder.Errors;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.CSharp.RuntimeBinder
 {
@@ -21,6 +21,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         private static MethodInfo s_SingleIsNaN;
 
         [RequiresUnreferencedCode(Binder.TrimmerWarning)]
+        [RequiresDynamicCode(Binder.DynamicCodeWarning)]
         internal static DynamicMetaObject Bind(
                 ICSharpBinder action,
                 RuntimeBinder binder,
@@ -474,6 +475,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         }
 
 #if !ENABLECOMBINDER
+        [RequiresDynamicCode(Binder.DynamicCodeWarning)]
         internal static void ThrowIfUsingDynamicCom(DynamicMetaObject target)
         {
             if (target.LimitType.IsCOMObject)

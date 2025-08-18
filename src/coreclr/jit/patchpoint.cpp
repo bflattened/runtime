@@ -34,7 +34,9 @@ class PatchpointTransformer
     Compiler* compiler;
 
 public:
-    PatchpointTransformer(Compiler* compiler) : ppCounterLclNum(BAD_VAR_NUM), compiler(compiler)
+    PatchpointTransformer(Compiler* compiler)
+        : ppCounterLclNum(BAD_VAR_NUM)
+        , compiler(compiler)
     {
     }
 
@@ -45,16 +47,10 @@ public:
     //   Number of patchpoints transformed.
     int Run()
     {
-        // If the first block is a patchpoint, insert a scratch block.
-        if (compiler->fgFirstBB->bbFlags & BBF_PATCHPOINT)
-        {
-            compiler->fgEnsureFirstBBisScratch();
-        }
-
         int count = 0;
         for (BasicBlock* const block : compiler->Blocks(compiler->fgFirstBB->Next()))
         {
-            if (block->bbFlags & BBF_PATCHPOINT)
+            if (block->HasFlag(BBF_PATCHPOINT))
             {
                 // We can't OSR from funclets.
                 //
@@ -62,13 +58,13 @@ public:
 
                 // Clear the patchpoint flag.
                 //
-                block->bbFlags &= ~BBF_PATCHPOINT;
+                block->RemoveFlags(BBF_PATCHPOINT);
 
                 JITDUMP("Patchpoint: regular patchpoint in " FMT_BB "\n", block->bbNum);
                 TransformBlock(block);
                 count++;
             }
-            else if (block->bbFlags & BBF_PARTIAL_COMPILATION_PATCHPOINT)
+            else if (block->HasFlag(BBF_PARTIAL_COMPILATION_PATCHPOINT))
             {
                 // We can't OSR from funclets.
                 // Also, we don't import the IL for these blocks.
@@ -78,11 +74,11 @@ public:
                 // If we're instrumenting, we should not have decided to
                 // put class probes here, as that is driven by looking at IL.
                 //
-                assert((block->bbFlags & BBF_HAS_HISTOGRAM_PROFILE) == 0);
+                assert(!block->HasFlag(BBF_HAS_HISTOGRAM_PROFILE));
 
                 // Clear the partial comp flag.
                 //
-                block->bbFlags &= ~BBF_PARTIAL_COMPILATION_PATCHPOINT;
+                block->RemoveFlags(BBF_PARTIAL_COMPILATION_PATCHPOINT);
 
                 JITDUMP("Patchpoint: partial compilation patchpoint in " FMT_BB "\n", block->bbNum);
                 TransformPartialCompilation(block);
@@ -101,14 +97,13 @@ private:
     // Arguments:
     //    jumpKind - jump kind for the new basic block
     //    insertAfter - basic block, after which compiler has to insert the new one.
-    //    jumpDest - jump target for the new basic block. Defaults to nullptr.
     //
     // Return Value:
     //    new basic block.
-    BasicBlock* CreateAndInsertBasicBlock(BBjumpKinds jumpKind, BasicBlock* insertAfter, BasicBlock* jumpDest = nullptr)
+    BasicBlock* CreateAndInsertBasicBlock(BBKinds jumpKind, BasicBlock* insertAfter)
     {
-        BasicBlock* block = compiler->fgNewBBafter(jumpKind, insertAfter, true, jumpDest);
-        block->bbFlags |= BBF_IMPORTED;
+        BasicBlock* block = compiler->fgNewBBafter(jumpKind, insertAfter, true);
+        block->SetFlags(BBF_IMPORTED);
         return block;
     }
 
@@ -143,16 +138,21 @@ private:
 
         // Current block now becomes the test block
         BasicBlock* remainderBlock = compiler->fgSplitBlockAtBeginning(block);
-        BasicBlock* helperBlock    = CreateAndInsertBasicBlock(BBJ_NONE, block);
+        BasicBlock* helperBlock    = CreateAndInsertBasicBlock(BBJ_ALWAYS, block);
 
         // Update flow and flags
-        block->SetJumpKindAndTarget(BBJ_COND, remainderBlock DEBUG_ARG(compiler));
-        block->bbFlags |= BBF_INTERNAL;
+        block->SetFlags(BBF_INTERNAL);
+        helperBlock->SetFlags(BBF_BACKWARD_JUMP);
 
-        helperBlock->bbFlags |= BBF_BACKWARD_JUMP;
+        assert(block->TargetIs(remainderBlock));
+        FlowEdge* const falseEdge = compiler->fgAddRefPred(helperBlock, block);
+        FlowEdge* const trueEdge  = block->GetTargetEdge();
+        trueEdge->setLikelihood(HIGH_PROBABILITY / 100.0);
+        falseEdge->setLikelihood((100 - HIGH_PROBABILITY) / 100.0);
+        block->SetCond(trueEdge, falseEdge);
 
-        compiler->fgAddRefPred(helperBlock, block);
-        compiler->fgAddRefPred(remainderBlock, helperBlock);
+        FlowEdge* const newEdge = compiler->fgAddRefPred(remainderBlock, helperBlock);
+        helperBlock->SetTargetEdge(newEdge);
 
         // Update weights
         remainderBlock->inheritWeight(block);
@@ -190,8 +190,6 @@ private:
     //  ppCounter = <initial value>
     void TransformEntry(BasicBlock* block)
     {
-        assert((block->bbFlags & BBF_PATCHPOINT) == 0);
-
         int initialCounterValue = JitConfig.TC_OnStackReplacement_InitialCounter();
 
         if (initialCounterValue < 0)
@@ -202,7 +200,7 @@ private:
         GenTree* initialCounterNode = compiler->gtNewIconNode(initialCounterValue, TYP_INT);
         GenTree* ppCounterStore     = compiler->gtNewStoreLclVarNode(ppCounterLclNum, initialCounterNode);
 
-        compiler->fgNewStmtNearEnd(block, ppCounterStore);
+        compiler->fgNewStmtAtBeg(block, ppCounterStore);
     }
 
     //------------------------------------------------------------------------
@@ -233,15 +231,14 @@ private:
         }
 
         // Update flow
-        block->SetJumpKindAndTarget(BBJ_THROW DEBUG_ARG(compiler));
+        block->SetKindAndTargetEdge(BBJ_THROW);
 
         // Add helper call
         //
         // call PartialCompilationPatchpointHelper(ilOffset)
         //
         GenTree*     ilOffsetNode = compiler->gtNewIconNode(ilOffset, TYP_INT);
-        GenTreeCall* helperCall =
-            compiler->gtNewHelperCallNode(CORINFO_HELP_PARTIAL_COMPILATION_PATCHPOINT, TYP_VOID, ilOffsetNode);
+        GenTreeCall* helperCall = compiler->gtNewHelperCallNode(CORINFO_HELP_PATCHPOINT_FORCED, TYP_VOID, ilOffsetNode);
 
         compiler->fgNewStmtAtEnd(block, helperCall);
     }

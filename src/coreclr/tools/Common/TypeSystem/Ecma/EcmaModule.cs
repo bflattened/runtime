@@ -16,6 +16,8 @@ namespace Internal.TypeSystem.Ecma
     {
         private readonly PEReader _peReader;
         protected readonly MetadataReader _metadataReader;
+        private volatile bool _isWrapNonExceptionThrowsComputed;
+        private volatile bool _isWrapNonExceptionThrows;
 
         internal interface IEntityHandleObject
         {
@@ -151,7 +153,7 @@ namespace Internal.TypeSystem.Ecma
                         break;
 
                     default:
-                        ThrowHelper.ThrowBadImageFormatException("unknown metadata token type: " + handle.Kind);
+                        ThrowHelper.ThrowBadImageFormatException();
                         item = null;
                         break;
                 }
@@ -378,7 +380,7 @@ namespace Internal.TypeSystem.Ecma
         {
             TypeDesc type = GetObject(handle, NotFoundBehavior.Throw) as TypeDesc;
             if (type == null)
-                ThrowHelper.ThrowBadImageFormatException($"type expected for handle {handle}");
+                ThrowHelper.ThrowBadImageFormatException();
             return type;
         }
 
@@ -386,7 +388,7 @@ namespace Internal.TypeSystem.Ecma
         {
             MethodDesc method = GetObject(handle, NotFoundBehavior.Throw) as MethodDesc;
             if (method == null)
-                ThrowHelper.ThrowBadImageFormatException($"method expected for handle {handle}");
+                ThrowHelper.ThrowBadImageFormatException();
             return method;
         }
 
@@ -394,7 +396,7 @@ namespace Internal.TypeSystem.Ecma
         {
             FieldDesc field = GetObject(handle, NotFoundBehavior.Throw) as FieldDesc;
             if (field == null)
-                ThrowHelper.ThrowBadImageFormatException($"field expected for handle {handle}");
+                ThrowHelper.ThrowBadImageFormatException();
             return field;
         }
 
@@ -449,7 +451,7 @@ namespace Internal.TypeSystem.Ecma
 
             MethodDesc methodDef = resolvedMethod as MethodDesc;
             if (methodDef == null)
-                ThrowHelper.ThrowBadImageFormatException($"method expected for handle {handle}");
+                ThrowHelper.ThrowBadImageFormatException();
 
             BlobReader signatureReader = _metadataReader.GetBlobReader(methodSpecification.Signature);
             EcmaSignatureParser parser = new EcmaSignatureParser(this, signatureReader, NotFoundBehavior.ReturnResolutionFailure);
@@ -615,22 +617,14 @@ namespace Internal.TypeSystem.Ecma
         {
             AssemblyReference assemblyReference = _metadataReader.GetAssemblyReference(handle);
 
-            AssemblyName an = new AssemblyName();
-            an.Name = _metadataReader.GetString(assemblyReference.Name);
-            an.Version = assemblyReference.Version;
-
-            var publicKeyOrToken = _metadataReader.GetBlobBytes(assemblyReference.PublicKeyOrToken);
-            if ((assemblyReference.Flags & AssemblyFlags.PublicKey) != 0)
-            {
-                an.SetPublicKey(publicKeyOrToken);
-            }
-            else
-            {
-                an.SetPublicKeyToken(publicKeyOrToken);
-            }
-
-            an.CultureName = _metadataReader.GetString(assemblyReference.Culture);
-            an.ContentType = GetContentTypeFromAssemblyFlags(assemblyReference.Flags);
+            AssemblyNameInfo an = new AssemblyNameInfo
+            (
+                name: _metadataReader.GetString(assemblyReference.Name),
+                version: assemblyReference.Version,
+                cultureName: _metadataReader.GetString(assemblyReference.Culture),
+                flags: (AssemblyNameFlags)assemblyReference.Flags,
+                publicKeyOrToken: _metadataReader.GetBlobContent(assemblyReference.PublicKeyOrToken)
+            );
 
             var assembly = _moduleResolver.ResolveAssembly(an, throwIfNotFound: false);
             if (assembly == null)
@@ -687,11 +681,6 @@ namespace Internal.TypeSystem.Ecma
             return (MetadataType)GetType(MetadataTokens.EntityHandle(0x02000001 /* COR_GLOBAL_PARENT_TOKEN */));
         }
 
-        protected static AssemblyContentType GetContentTypeFromAssemblyFlags(AssemblyFlags flags)
-        {
-            return (AssemblyContentType)(((int)flags & 0x0E00) >> 9);
-        }
-
         public string GetUserString(UserStringHandle userStringHandle)
         {
             // String literals are not cached
@@ -702,6 +691,53 @@ namespace Internal.TypeSystem.Ecma
         {
             ModuleDefinition moduleDefinition = _metadataReader.GetModuleDefinition();
             return _metadataReader.GetString(moduleDefinition.Name);
+        }
+
+        public bool IsWrapNonExceptionThrows
+        {
+            get
+            {
+                if (!_isWrapNonExceptionThrowsComputed)
+                {
+                    ComputeIsWrapNonExceptionThrows();
+                    _isWrapNonExceptionThrowsComputed = true;
+                }
+                return _isWrapNonExceptionThrows;
+            }
+        }
+
+        private void ComputeIsWrapNonExceptionThrows()
+        {
+            var reader = MetadataReader;
+            var c = reader.StringComparer;
+            bool foundAttribute = false;
+            foreach (var attr in reader.GetAssemblyDefinition().GetCustomAttributes())
+            {
+                if (reader.GetAttributeNamespaceAndName(attr, out var ns, out var n))
+                {
+                    if (c.Equals(ns, "System.Runtime.CompilerServices") && c.Equals(n, "RuntimeCompatibilityAttribute"))
+                    {
+                        var dec = reader.GetCustomAttribute(attr).DecodeValue(new CustomAttributeTypeProvider(this));
+
+                        foreach (var arg in dec.NamedArguments)
+                        {
+                            if (arg.Name == "WrapNonExceptionThrows")
+                            {
+                                if (!(arg.Value is bool))
+                                    ThrowHelper.ThrowBadImageFormatException();
+                                _isWrapNonExceptionThrows = (bool)arg.Value;
+                                foundAttribute = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (foundAttribute)
+                {
+                    break;
+                }
+            }
         }
     }
 }

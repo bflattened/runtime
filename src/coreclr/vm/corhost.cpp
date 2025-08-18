@@ -310,6 +310,15 @@ HRESULT CorHost2::ExecuteAssembly(DWORD dwAppDomainId,
 
     _ASSERTE (!pThread->PreemptiveGCDisabled());
 
+    if (g_EntryAssemblyPath == NULL)
+    {
+        // Store the entry assembly path for diagnostic purposes (for example, dumps)
+        size_t len = u16_strlen(pwzAssemblyPath) + 1;
+        NewArrayHolder<WCHAR> path { new WCHAR[len] };
+        wcscpy_s(path, len, pwzAssemblyPath);
+        g_EntryAssemblyPath = path.Extract();
+    }
+
     Assembly *pAssembly = AssemblySpec::LoadAssembly(pwzAssemblyPath);
 
 #if defined(FEATURE_MULTICOREJIT)
@@ -550,14 +559,11 @@ HRESULT CorHost2::CreateAppDomainWithManager(
 
     BEGIN_EXTERNAL_ENTRYPOINT(&hr);
 
-    AppDomain* pDomain = SystemDomain::System()->DefaultDomain();
+    AppDomain* pDomain = AppDomain::GetCurrentDomain();
 
     pDomain->SetFriendlyName(wszFriendlyName);
 
-    ETW::LoaderLog::DomainLoad(pDomain, (LPWSTR)wszFriendlyName);
-
-    if (dwFlags & APPDOMAIN_IGNORE_UNHANDLED_EXCEPTIONS)
-        pDomain->SetIgnoreUnhandledExceptions();
+    ETW::LoaderLog::DomainLoad((LPWSTR)wszFriendlyName);
 
     if (dwFlags & APPDOMAIN_FORCE_TRIVIAL_WAIT_OPERATIONS)
         pDomain->SetForceTrivialWaitOperations();
@@ -630,7 +636,7 @@ HRESULT CorHost2::CreateAppDomainWithManager(
             sAppPaths));
     }
 
-#if defined(TARGET_UNIX)
+#if defined(TARGET_UNIX) && !defined(FEATURE_STATICALLY_LINKED)
     if (!g_coreclr_embedded)
     {
         // Check if the current code is executing in the single file host or in libcoreclr.so. The libSystem.Native is linked
@@ -654,6 +660,15 @@ HRESULT CorHost2::CreateAppDomainWithManager(
     *pAppDomainID=DefaultADID;
 
     m_fAppDomainCreated = TRUE;
+
+#ifdef FEATURE_PERFTRACING
+    // Initialize default event sources
+    {
+        GCX_COOP();
+        MethodDescCallSite initEventSources(METHOD__EVENT_SOURCE__INITIALIZE_DEFAULT_EVENT_SOURCES);
+        initEventSources.Call(NULL);
+    }
+#endif // FEATURE_PERFTRACING
 
     END_EXTERNAL_ENTRYPOINT;
 
@@ -682,9 +697,9 @@ HRESULT CorHost2::CreateDelegate(
     EMPTY_STRING_TO_NULL(wszClassName);
     EMPTY_STRING_TO_NULL(wszMethodName);
 
-    if (fnPtr == NULL)
+    if (fnPtr == 0)
        return E_POINTER;
-    *fnPtr = NULL;
+    *fnPtr = 0;
 
     if(wszAssemblyName == NULL)
         return E_INVALIDARG;
@@ -740,7 +755,7 @@ HRESULT CorHost2::CreateDelegate(
         }
         else
         {
-            UMEntryThunk* pUMEntryThunk = pMD->GetLoaderAllocator()->GetUMEntryThunkCache()->GetUMEntryThunk(pMD);
+            UMEntryThunkData* pUMEntryThunk = pMD->GetLoaderAllocator()->GetUMEntryThunkCache()->GetUMEntryThunk(pMD);
             *fnPtr = (INT_PTR)pUMEntryThunk->GetCode();
         }
     }

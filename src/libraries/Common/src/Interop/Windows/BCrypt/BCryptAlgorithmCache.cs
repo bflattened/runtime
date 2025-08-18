@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics;
 using System.Collections.Concurrent;
-
+using System.Diagnostics;
 using Microsoft.Win32.SafeHandles;
 
 internal static partial class Interop
@@ -18,7 +17,7 @@ internal static partial class Interop
             /// <summary>
             /// Returns a SafeBCryptAlgorithmHandle of the desired algorithm and flags. This is a shared handle so do not dispose it!
             /// </summary>
-            public static unsafe SafeBCryptAlgorithmHandle GetCachedBCryptAlgorithmHandle(string hashAlgorithmId, BCryptOpenAlgorithmProviderFlags flags, out int hashSizeInBytes)
+            public static SafeBCryptAlgorithmHandle GetCachedBCryptAlgorithmHandle(string hashAlgorithmId, BCryptOpenAlgorithmProviderFlags flags, out int hashSizeInBytes)
             {
                 var key = (hashAlgorithmId, flags);
 
@@ -45,7 +44,7 @@ internal static partial class Interop
                 }
             }
 
-            public static unsafe bool IsBCryptAlgorithmSupported(string hashAlgorithmId, BCryptOpenAlgorithmProviderFlags flags)
+            public static bool IsBCryptAlgorithmSupported(string hashAlgorithmId, BCryptOpenAlgorithmProviderFlags flags)
             {
                 var key = (hashAlgorithmId, flags);
 

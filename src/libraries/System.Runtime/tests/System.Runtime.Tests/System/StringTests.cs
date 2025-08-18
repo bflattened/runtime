@@ -5,6 +5,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -149,6 +150,30 @@ namespace System.Tests
         }
 
         [Fact]
+        public static void Create_CanSquirrelAwayArg()
+        {
+            object arg = new object();
+            object storedArg = null;
+            string result = string.Create(5, arg, (span, arg) =>
+            {
+                "hello".AsSpan().CopyTo(span);
+                storedArg = arg;
+            });
+            Assert.Equal("hello", result);
+            Assert.Same(arg, storedArg);
+        }
+
+        [Fact]
+        public static void Create_CanPassSpanAsArg()
+        {
+            string result = string.Create(5, "hello".AsSpan(), (span, arg) =>
+            {
+                arg.CopyTo(span);
+            });
+            Assert.Equal("hello", result);
+        }
+
+        [Fact]
         public static void Create_InterpolatedString_ConstructsStringAndClearsBuilder()
         {
             Span<char> initialBuffer = stackalloc char[16];
@@ -185,6 +210,7 @@ namespace System.Tests
         [InlineData("Hello", 'e', StringComparison.CurrentCulture, true)]
         [InlineData("Hello", 'E', StringComparison.CurrentCulture, false)]
         [InlineData("", 'H', StringComparison.CurrentCulture, false)]
+        [InlineData("", '\u0301', StringComparison.CurrentCulture, false)] // Using non-ASCII character to test ICU path
         // CurrentCultureIgnoreCase
         [InlineData("Hello", 'H', StringComparison.CurrentCultureIgnoreCase, true)]
         [InlineData("Hello", 'Z', StringComparison.CurrentCultureIgnoreCase, false)]
@@ -232,7 +258,7 @@ namespace System.Tests
             yield return new object[] { "Hello", "", StringComparison.CurrentCulture, true };
             yield return new object[] { "Hello", "Ell" + SoftHyphen, StringComparison.CurrentCulture, false };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "Hello", "ell" + SoftHyphen, StringComparison.CurrentCulture, true };
 
             // CurrentCultureIgnoreCase
@@ -245,7 +271,7 @@ namespace System.Tests
             yield return new object[] { "", "hello", StringComparison.CurrentCultureIgnoreCase, false };
             yield return new object[] { "Hello", "", StringComparison.CurrentCultureIgnoreCase, true };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
             {
                 yield return new object[] { "Hello", "ell" + SoftHyphen, StringComparison.CurrentCultureIgnoreCase, true };
                 yield return new object[] { "Hello", "Ell" + SoftHyphen, StringComparison.CurrentCultureIgnoreCase, true };
@@ -262,7 +288,7 @@ namespace System.Tests
             yield return new object[] { "Hello", "", StringComparison.InvariantCulture, true };
             yield return new object[] { "Hello", "Ell" + SoftHyphen, StringComparison.InvariantCulture, false };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "Hello", "ell" + SoftHyphen, StringComparison.InvariantCulture, true };
 
             // InvariantCultureIgnoreCase
@@ -275,7 +301,7 @@ namespace System.Tests
             yield return new object[] { "", "hello", StringComparison.InvariantCultureIgnoreCase, false };
             yield return new object[] { "Hello", "", StringComparison.InvariantCultureIgnoreCase, true };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
             {
                 yield return new object[] { "Hello", "ell" + SoftHyphen, StringComparison.InvariantCultureIgnoreCase, true };
                 yield return new object[] { "Hello", "Ell" + SoftHyphen, StringComparison.InvariantCultureIgnoreCase, true };
@@ -699,7 +725,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", "d", StringComparison.CurrentCulture, "adc" };
             yield return new object[] { "abc", "b", null, StringComparison.CurrentCulture, "ac" };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.CurrentCulture, "def" };
 
             yield return new object[] { "abc", "abc", "def", StringComparison.CurrentCultureIgnoreCase, "def" };
@@ -709,7 +735,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", "d", StringComparison.CurrentCultureIgnoreCase, "adc" };
             yield return new object[] { "abc", "b", null, StringComparison.CurrentCultureIgnoreCase, "ac" };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.CurrentCultureIgnoreCase, "def" };
 
             yield return new object[] { "abc", "abc", "def", StringComparison.Ordinal, "def" };
@@ -719,7 +745,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", "d", StringComparison.Ordinal, "adc" };
             yield return new object[] { "abc", "b", null, StringComparison.Ordinal, "ac" };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.Ordinal, "abc" };
 
             yield return new object[] { "abc", "abc", "def", StringComparison.OrdinalIgnoreCase, "def" };
@@ -730,7 +756,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", null, StringComparison.OrdinalIgnoreCase, "ac" };
 
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.OrdinalIgnoreCase, "abc" };
 
             yield return new object[] { "abc", "abc", "def", StringComparison.InvariantCulture, "def" };
@@ -741,7 +767,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", null, StringComparison.InvariantCulture, "ac" };
 
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.InvariantCulture, "def" };
 
             yield return new object[] { "abc", "abc", "def", StringComparison.InvariantCultureIgnoreCase, "def" };
@@ -752,7 +778,7 @@ namespace System.Tests
             yield return new object[] { "abc", "b", null, StringComparison.InvariantCultureIgnoreCase, "ac" };
 
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
             {
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", StringComparison.InvariantCultureIgnoreCase, "def" };
 
@@ -821,7 +847,7 @@ namespace System.Tests
             yield return new object[] { "abc", "abc", "def", true, CultureInfo.InvariantCulture, "def" };
             yield return new object[] { "abc", "ABC", "def", true, CultureInfo.InvariantCulture, "def" };
 
-            if (PlatformDetection.IsNotInvariantGlobalization)
+            if (PlatformDetection.IsNotInvariantGlobalization && PlatformDetection.IsNotHybridGlobalizationOnApplePlatform)
             {
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", false, null, "def" };
                 yield return new object[] { "abc", "abc" + SoftHyphen, "def", true, null, "def" };
@@ -906,7 +932,7 @@ namespace System.Tests
             Assert.NotEqual("abc".GetHashCode(), string.GetHashCode("ABC".AsSpan())); // case differences
         }
 
-        [Fact]
+        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotInvariantGlobalization))]
         public static void GetHashCode_CompareInfo()
         {
             // ordinal
@@ -960,6 +986,29 @@ namespace System.Tests
             Assert.Equal(hashCodeFromStringComparer, hashCodeFromStringGetHashCodeOfSpan);
         }
 
+        public static IEnumerable<object[]> NonRandomizedGetHashCode_EquivalentForStringAndSpan_MemberData() =>
+            from charValueLimit in new[] { 128, 256, char.MaxValue }
+            from ignoreCase in new[] { false, true }
+            select new object[] { charValueLimit, ignoreCase };
+
+        [Theory]
+        [MemberData(nameof(NonRandomizedGetHashCode_EquivalentForStringAndSpan_MemberData))]
+        public static void NonRandomizedGetHashCode_EquivalentForStringAndSpan(int charValueLimit, bool ignoreCase)
+        {
+            // This is testing internal API. If that API changes, this test will need to be updated.
+            const BindingFlags Flags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic;
+            string suffix = ignoreCase ? "OrdinalIgnoreCase" : "";
+            Func<string, int> getStringHC = typeof(string).GetMethod($"GetNonRandomizedHashCode{suffix}", Flags, Type.EmptyTypes)!.CreateDelegate<Func<string, int>>();
+            Func<ReadOnlySpan<char>, int> getSpanHC = typeof(string).GetMethod($"GetNonRandomizedHashCode{suffix}", Flags, [typeof(ReadOnlySpan<char>)])!.CreateDelegate<Func<ReadOnlySpan<char>, int>>();
+
+            var r = new Random(42);
+            for (int i = 0; i < 512; i++)
+            {
+                string s = new string(r.GetItems(Enumerable.Range(0, charValueLimit).Select(i => (char)i).ToArray(), i));
+                Assert.Equal(getStringHC(s), getSpanHC(s.AsSpan()));
+            }
+        }
+
         public static IEnumerable<object[]> GetHashCode_NoSuchStringComparison_ThrowsArgumentException_Data => new[]
         {
             new object[] { StringComparisons.Min() - 1 },
@@ -993,7 +1042,8 @@ namespace System.Tests
             GCHandle gcHandle = GCHandle.Alloc(input, GCHandleType.Pinned);
             try
             {
-                Assert.Equal((IntPtr)Unsafe.AsPointer(ref Unsafe.AsRef(in rChar)), gcHandle.AddrOfPinnedObject());
+                // Unsafe.AsPointer is safe since it's pinned by the gc handle
+                Assert.Equal((IntPtr)Unsafe.AsPointer(in rChar), gcHandle.AddrOfPinnedObject());
             }
             finally
             {

@@ -16,7 +16,7 @@ class ExceptionFlags;
 //
 // This class stores information necessary to intercept an exception.  It's basically a communication channel
 // between the debugger and the EH subsystem.  Each internal exception tracking structure
-// (ExInfo on x86 and ExceptionTracker on WIN64) contains one DebuggerExState.
+// (ExInfo) contains one DebuggerExState.
 //
 // Notes:
 //    This class actually stores more information on x86 than on WIN64 because the x86 EH subsystem
@@ -253,12 +253,6 @@ public:
         m_fManagedCodeEntered = fEntered;
     }
 
-    void SetCallerStackFrame(CallerStackFrame csfEHClause)
-    {
-        LIMITED_METHOD_CONTRACT;
-        m_csfEHClause = csfEHClause;
-    }
-
     COR_PRF_CLAUSE_TYPE GetClauseType()     { LIMITED_METHOD_CONTRACT; return m_ClauseType;           }
 
     UINT_PTR GetIPForEHClause()             { LIMITED_METHOD_CONTRACT; return m_IPForEHClause;        }
@@ -268,17 +262,6 @@ public:
 
     StackFrame GetStackFrameForEHClause()            { LIMITED_METHOD_CONTRACT; return m_sfForEHClause; }
     CallerStackFrame GetCallerStackFrameForEHClause(){ LIMITED_METHOD_CONTRACT; return m_csfEHClause;   }
-
-    // On some platforms, we make the call to the funclets via an assembly helper. The reference to the field
-    // containing the stack pointer is passed to the assembly helper so that it can update
-    // it with correct SP value once its prolog has executed.
-    //
-    // This method is used to get the field reference
-    CallerStackFrame* GetCallerStackFrameForEHClauseReference()
-    {
-        LIMITED_METHOD_CONTRACT;
-        return &m_csfEHClause;
-    }
 
 private:
     UINT_PTR         m_IPForEHClause;   // the entry point of the current notified exception clause
@@ -305,7 +288,6 @@ public:
         if (fReadOnly)
         {
             m_flags |= Ex_FlagsAreReadOnly;
-            m_debugFlags |= Ex_FlagsAreReadOnly;
         }
 #endif // _DEBUG
     }
@@ -316,7 +298,7 @@ public:
         SUPPORTS_DAC;
 
 #if defined(FEATURE_EH_FUNCLETS) && defined(_DEBUG)
-        if ((m_flags & Ex_FlagsAreReadOnly) || (m_debugFlags & Ex_FlagsAreReadOnly))
+        if (m_flags & Ex_FlagsAreReadOnly)
         {
             _ASSERTE(!"Tried to update read-only flags!");
         }
@@ -326,9 +308,6 @@ public:
     void Init()
     {
         m_flags = 0;
-#ifdef _DEBUG
-        m_debugFlags = 0;
-#endif // _DEBUG
     }
 
     BOOL IsRethrown()      { LIMITED_METHOD_CONTRACT; return m_flags & Ex_IsRethrown; }
@@ -348,9 +327,9 @@ public:
     void ResetUseExInfoForStackwalk() { LIMITED_METHOD_DAC_CONTRACT; AssertIfReadOnly(); m_flags &= ~Ex_UseExInfoForStackwalk; }
 
 #ifdef _DEBUG
-    BOOL ReversePInvokeEscapingException()      { LIMITED_METHOD_DAC_CONTRACT; return m_debugFlags & Ex_RPInvokeEscapingException; }
-    void SetReversePInvokeEscapingException()   { LIMITED_METHOD_DAC_CONTRACT; AssertIfReadOnly(); m_debugFlags |= Ex_RPInvokeEscapingException; }
-    void ResetReversePInvokeEscapingException() { LIMITED_METHOD_DAC_CONTRACT; AssertIfReadOnly(); m_debugFlags &= ~Ex_RPInvokeEscapingException; }
+    BOOL ReversePInvokeEscapingException()      { LIMITED_METHOD_DAC_CONTRACT; return m_flags & Ex_RPInvokeEscapingException; }
+    void SetReversePInvokeEscapingException()   { LIMITED_METHOD_DAC_CONTRACT; AssertIfReadOnly(); m_flags |= Ex_RPInvokeEscapingException; }
+    void ResetReversePInvokeEscapingException() { LIMITED_METHOD_DAC_CONTRACT; AssertIfReadOnly(); m_flags &= ~Ex_RPInvokeEscapingException; }
 #endif // _DEBUG
 
 #ifdef DEBUGGING_SUPPORTED
@@ -411,6 +390,10 @@ private:
 
         Ex_GotWatsonBucketInfo          = 0x00004000,
 
+#ifdef _DEBUG
+        Ex_RPInvokeEscapingException    = 0x40000000,
+#endif // _DEBUG
+
 #if defined(FEATURE_EH_FUNCLETS) && defined(_DEBUG)
         Ex_FlagsAreReadOnly             = 0x80000000
 #endif // defined(FEATURE_EH_FUNCLETS) && defined(_DEBUG)
@@ -418,14 +401,6 @@ private:
     };
 
     UINT32 m_flags;
-
-#ifdef _DEBUG
-    enum
-    {
-        Ex_RPInvokeEscapingException    = 0x40000000
-    };
-    UINT32 m_debugFlags;
-#endif // _DEBUG
 };
 
 //------------------------------------------------------------------------------

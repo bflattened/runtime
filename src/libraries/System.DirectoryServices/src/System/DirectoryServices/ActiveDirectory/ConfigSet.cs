@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
 using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace System.DirectoryServices.ActiveDirectory
 {
@@ -161,10 +161,7 @@ namespace System.DirectoryServices.ActiveDirectory
         {
             CheckIfDisposed();
 
-            if (partitionName == null)
-            {
-                throw new ArgumentNullException(nameof(partitionName));
-            }
+            ArgumentNullException.ThrowIfNull(partitionName);
 
             return FindOneAdamInstance(Name, _context, partitionName, null);
         }
@@ -177,10 +174,7 @@ namespace System.DirectoryServices.ActiveDirectory
             // null partitionName would signify that we don't care about the partition
             //
 
-            if (siteName == null)
-            {
-                throw new ArgumentNullException(nameof(siteName));
-            }
+            ArgumentNullException.ThrowIfNull(siteName);
 
             return FindOneAdamInstance(Name, _context, partitionName, siteName);
         }
@@ -196,10 +190,7 @@ namespace System.DirectoryServices.ActiveDirectory
         {
             CheckIfDisposed();
 
-            if (partitionName == null)
-            {
-                throw new ArgumentNullException(nameof(partitionName));
-            }
+            ArgumentNullException.ThrowIfNull(partitionName);
 
             return FindAdamInstances(_context, partitionName, null);
         }
@@ -212,10 +203,7 @@ namespace System.DirectoryServices.ActiveDirectory
             // null partitionName would signify that we don't care about the partition
             //
 
-            if (siteName == null)
-            {
-                throw new ArgumentNullException(nameof(siteName));
-            }
+            ArgumentNullException.ThrowIfNull(siteName);
 
             return FindAdamInstances(_context, partitionName, siteName);
         }

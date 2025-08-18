@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data.ProviderBase;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1545,7 +1545,7 @@ namespace System.Data.Common
                     }
                     finally
                     {
-                        // using Close which can optimize its { while(dataReader.NextResult()); } loop
+                        // using Close which can optimize its { while (dataReader.NextResult()); } loop
                         dataReader.Close();
 
                         // RecordsAffected is available after Close, but don't trust it after Dispose

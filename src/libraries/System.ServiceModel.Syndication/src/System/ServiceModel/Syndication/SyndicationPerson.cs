@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Xml;
 using System.Diagnostics.CodeAnalysis;
+using System.Xml;
 
 namespace System.ServiceModel.Syndication
 {
@@ -29,10 +29,7 @@ namespace System.ServiceModel.Syndication
 
         protected SyndicationPerson(SyndicationPerson source)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentNullException.ThrowIfNull(source);
 
             Email = source.Email;
             Name = source.Name;

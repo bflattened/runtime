@@ -1,5 +1,6 @@
 # Native runtime events supported by aot runtime.
 
+AllocationSampled
 BGC1stConEnd
 BGC1stNonConEnd
 BGC1stSweepEnd
@@ -15,10 +16,13 @@ BGCOverflow_V1
 BGCPlanEnd
 BGCRevisit
 BGCSweepEnd
+BulkType
 Contention
 ContentionLockCreated
 ContentionStart_V2
 ContentionStop_V1
+DCEndComplete_V1
+DCEndInit_V1
 DecreaseMemoryPressure
 DestroyGCHandle
 ExceptionCatchStart
@@ -45,6 +49,7 @@ GCBulkSurvivingObjectRanges
 GCCreateConcurrentThread_V1
 GCCreateSegment_V1
 GCDecision_V1
+GCDynamicEvent
 GCEnd_V1
 GCFinalizersBegin_V1
 GCFinalizersEnd_V1
@@ -78,7 +83,8 @@ GenAwareBegin
 GenAwareEnd
 IncreaseMemoryPressure
 LockCreated
-ModuleLoad_V2
+ModuleDCEnd_V3
+ModuleLoad_V3
 PinObjectAtGCTime
 PinPlugAtGCTime
 PrvDestroyGCHandle
@@ -109,3 +115,6 @@ ThreadPoolWorkerThreadStop
 ThreadPoolWorkerThreadWait
 ThreadPoolWorkingThreadCount
 ThreadRunning
+WaitHandleWaitStart
+WaitHandleWaitStop
+YieldProcessorMeasurement

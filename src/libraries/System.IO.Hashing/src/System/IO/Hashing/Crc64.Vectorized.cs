@@ -3,8 +3,8 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using static System.IO.Hashing.VectorHelper;
 
 namespace System.IO.Hashing
@@ -43,6 +43,10 @@ namespace System.IO.Hashing
         // "Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction" in December, 2009 and the
         // Intel reference implementation.
         // https://github.com/intel/isa-l/blob/33a2d9484595c2d6516c920ce39a694c144ddf69/crc/crc64_ecma_norm_by8.asm
+        //
+        // Marking this as noinline so the JIT doesn't try and inline this and end up not inlining some of the calls it makes.
+        //
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private static ulong UpdateVectorized(ulong crc, ReadOnlySpan<byte> source)
         {
             Debug.Assert(CanBeVectorized(source), "source cannot be vectorized.");

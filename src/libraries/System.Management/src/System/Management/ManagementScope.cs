@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel;
-using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.ComponentModel.Design.Serialization;
+using System.Runtime.InteropServices;
 using System.Security;
 using Microsoft.Win32;
 
@@ -1513,10 +1513,7 @@ namespace System.Management
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
 
-            if (destinationType == null)
-            {
-                throw new ArgumentNullException(nameof(destinationType));
-            }
+            ArgumentNullException.ThrowIfNull(destinationType);
 
             if (value is ManagementScope && destinationType == typeof(InstanceDescriptor))
             {
