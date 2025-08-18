@@ -170,14 +170,6 @@ else ()
     target_link_libraries(System.IO.Compression.Native-Static PUBLIC ${BROTLI_LIBRARIES})
 
     if(STATIC_LIBS_ONLY)
-        # CFG runtime checks in C++ code are unnecessary overhead unless Native AOT compiler produces CFG compliant code as well
-        # and CFG is enabled in the linker
-        if(CMAKE_CXX_FLAGS MATCHES "/guard:cf")
-          string(REPLACE "/guard:cf" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        endif()
-        if(CMAKE_C_FLAGS MATCHES "/guard:cf")
-          string(REPLACE "/guard:cf" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-        endif()
         add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Zl>)
         if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/RTC1")
           string(REPLACE "/RTC1" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -199,6 +191,7 @@ else ()
         target_include_directories(System.IO.Compression.Native.Aot PUBLIC ${BROTLI_INCLUDE_DIRS})
         target_link_libraries(System.IO.Compression.Native.Aot PUBLIC ${BROTLI_LIBRARIES})
         set_target_properties(System.IO.Compression.Native.Aot PROPERTIES INTERPROCEDURAL_OPTIMIZATION OFF)
+        set_target_properties(System.IO.Compression.Native.Aot PROPERTIES CLR_CONTROL_FLOW_GUARD OFF)
     endif()
 
     if (GEN_SHARED_LIB)

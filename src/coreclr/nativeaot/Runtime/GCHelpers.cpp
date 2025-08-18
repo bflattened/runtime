@@ -581,6 +581,7 @@ static Object* GcAllocInternal(MethodTable* pEEType, uint32_t uFlags, uintptr_t 
     size_t samplingBudget = 0;
 
     bool isRandomizedSamplingEnabled = ee_alloc_context::IsRandomizedSamplingEnabled();
+#ifdef FEATURE_EVENT_TRACE
     if (isRandomizedSamplingEnabled)
     {
         // The number bytes we can allocate before we need to emit a sampling event.
@@ -612,6 +613,7 @@ static Object* GcAllocInternal(MethodTable* pEEType, uint32_t uFlags, uintptr_t 
             isSampled = (samplingBudget < cbSize);
         }
     }
+#endif
 
     Object* pObject = GCHeapUtilities::GetGCHeap()->Alloc(pAllocContext, cbSize, uFlags);
     if (pObject == NULL)

@@ -171,10 +171,12 @@ namespace System.Threading
                         }
                     }
 
+#if FEATURE_PERFTRACING
                     if (sendWaitEvents)
                     {
                         NativeRuntimeEventSource.Log.WaitHandleWaitStart(waitSource, associatedObject ?? this);
                     }
+#endif
 
                     // When tryNonblockingWaitFirst is true, we have a final wait result from the nonblocking wait above
                     if (!tryNonblockingWaitFirst)
@@ -184,10 +186,12 @@ namespace System.Threading
                     }
 
 #if !CORECLR // CoreCLR sends the wait events from the native side
+#if FEATURE_PERFTRACING
                     if (sendWaitEvents)
                     {
                         NativeRuntimeEventSource.Log.WaitHandleWaitStop();
                     }
+#endif
 #endif
                 }
 
@@ -425,10 +429,12 @@ namespace System.Threading
                 }
             }
 
+#if FEATURE_PERFTRACING
             if (sendWaitEvents)
             {
                 NativeRuntimeEventSource.Log.WaitHandleWaitStart();
             }
+#endif
 
             // When tryNonblockingWaitFirst is true, we have a final wait result from the nonblocking wait above
             if (!tryNonblockingWaitFirst)
@@ -438,10 +444,12 @@ namespace System.Threading
             }
 
 #if !CORECLR // CoreCLR sends the wait events from the native side
+#if FEATURE_PERFTRACING
             if (sendWaitEvents)
             {
                 NativeRuntimeEventSource.Log.WaitHandleWaitStop();
             }
+#endif
 #endif
 
             return waitResult;

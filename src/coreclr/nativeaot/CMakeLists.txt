@@ -15,6 +15,7 @@ if(MSVC)
   endif()
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/GS->)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Gs10000000>) # avoid __chkstk
+  set_property(DIRECTORY PROPERTY CLR_CONTROL_FLOW_GUARD OFF)
 
   # Sets the options that create the fastest code in the majority of cases
   add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:/O2>)

@@ -487,12 +487,14 @@ namespace System.Threading
             {
                 Interlocked.Increment(ref s_contentionCount);
 
+#if FEATURE_PERFTRACING
                 long waitStartTimeTicks = 0;
                 if (areContentionEventsEnabled)
                 {
                     NativeRuntimeEventSource.Log.ContentionStart(this);
                     waitStartTimeTicks = Stopwatch.GetTimestamp();
                 }
+#endif
 
                 using ThreadBlockingInfo.Scope threadBlockingScope = new(this, timeoutMs);
 
@@ -560,12 +562,14 @@ namespace System.Threading
                     Debug.Assert(_recursionCount == 0);
                     _owningThreadId = currentThreadId.Id;
 
+#if FEATURE_PERFTRACING
                     if (areContentionEventsEnabled)
                     {
                         double waitDurationNs =
                             (Stopwatch.GetTimestamp() - waitStartTimeTicks) * 1_000_000_000.0 / Stopwatch.Frequency;
                         NativeRuntimeEventSource.Log.ContentionStop(waitDurationNs);
                     }
+#endif
 
                     return currentThreadId;
                 }

@@ -37,10 +37,13 @@ inline bool ee_alloc_context::IsRandomizedSamplingEnabled()
 inline void ee_alloc_context::UpdateCombinedLimit(bool samplingEnabled)
 {
     _thread_inl_gc_alloc_context* gc_alloc_context = (_thread_inl_gc_alloc_context*)GetGCAllocContext();
+#ifdef FEATURE_EVENT_TRACE
     if (!samplingEnabled)
+#endif
     {
         combined_limit = gc_alloc_context->alloc_limit;
     }
+#ifdef FEATURE_EVENT_TRACE
     else
     {
         // compute the next sampling budget based on a geometric distribution
@@ -52,8 +55,10 @@ inline void ee_alloc_context::UpdateCombinedLimit(bool samplingEnabled)
         size_t size = gc_alloc_context->alloc_limit - gc_alloc_context->alloc_ptr;
         combined_limit = gc_alloc_context->alloc_ptr + min(samplingBudget, size);
     }
+#endif
 }
 
+#ifdef FEATURE_EVENT_TRACE
 inline uint32_t ee_alloc_context::ComputeGeometricRandom()
 {
     // compute a random sample from the Geometric distribution.
@@ -68,6 +73,7 @@ inline double ee_alloc_context::PerThreadRandom::NextDouble()
     uint32_t value = minipal_xoshiro128pp_next(&random_state);
     return value * (1.0/(UINT32_MAX+1.0));
 }
+#endif
 
 // Set the m_pDeferredTransitionFrame field for GC allocation helpers that setup transition frame
 // in assembly code. Do not use anywhere else.

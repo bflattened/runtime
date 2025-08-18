@@ -87,6 +87,7 @@ FCIMPLEND
 #ifdef TARGET_WINDOWS
 FCIMPL0(void, RhpFirstChanceExceptionNotification)
 {
+#if 0
     // Throw an SEH exception and immediately catch it. This is used to notify debuggers and other tools
     // that an exception has been thrown.
     if (minipal_is_native_debugger_present())
@@ -100,6 +101,7 @@ FCIMPL0(void, RhpFirstChanceExceptionNotification)
             // Do nothing, we just want to notify the debugger.
         }
     }
+#endif
 }
 FCIMPLEND
 #endif // TARGET_WINDOWS

@@ -116,6 +116,8 @@ struct ee_alloc_context
     uint8_t* GetCombinedLimit();
     void UpdateCombinedLimit(bool samplingEnabled);
     static bool IsRandomizedSamplingEnabled();
+
+#ifdef FEATURE_EVENT_TRACE
     static uint32_t ComputeGeometricRandom();
 
     struct PerThreadRandom
@@ -127,6 +129,7 @@ struct ee_alloc_context
     };
 
     static thread_local PerThreadRandom t_random;
+#endif
 };
 
 
