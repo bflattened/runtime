@@ -93,7 +93,7 @@ jobs:
       - name: Archive native compiler artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: native-compiler
+          name: native-compiler-${{ matrix.os }}-${{ matrix.arch }}
           path: artifacts/bflat-compiler-native-${{ matrix.os }}-${{ matrix.arch }}.zip
         if: ${{ matrix.os != 'linux-bionic' }}
 
@@ -118,7 +118,7 @@ jobs:
       - name: Archive libs
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-${{ matrix.os }}-${{ matrix.arch }}
           path: artifacts/bflat-libs-${{ matrix.os }}-${{ matrix.arch }}.zip
 
       - name: ZIP refs
@@ -208,7 +208,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: native-compiler/bflat-compiler-native-windows-x64.zip
+          asset_path: native-compiler-windows-x64/bflat-compiler-native-windows-x64.zip
           asset_name: bflat-compiler-native-windows-x64.zip
           asset_content_type: application/zip
 
@@ -218,7 +218,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: native-compiler/bflat-compiler-native-linux-glibc-x64.zip
+          asset_path: native-compiler-linux-glibc-x64/bflat-compiler-native-linux-glibc-x64.zip
           asset_name: bflat-compiler-native-linux-glibc-x64.zip
           asset_content_type: application/zip
 
@@ -228,7 +228,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: libs/bflat-libs-windows-x64.zip
+          asset_path: libs-windows-x64/bflat-libs-windows-x64.zip
           asset_name: bflat-libs-windows-x64.zip
           asset_content_type: application/zip
 
@@ -238,7 +238,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: libs/bflat-libs-linux-glibc-x64.zip
+          asset_path: libs-linux-glibc-x64/bflat-libs-linux-glibc-x64.zip
           asset_name: bflat-libs-linux-glibc-x64.zip
           asset_content_type: application/zip
 
@@ -248,7 +248,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: native-compiler/bflat-compiler-native-windows-arm64.zip
+          asset_path: native-compiler-windows-arm64/bflat-compiler-native-windows-arm64.zip
           asset_name: bflat-compiler-native-windows-arm64.zip
           asset_content_type: application/zip
 
@@ -258,7 +258,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: native-compiler/bflat-compiler-native-linux-glibc-arm64.zip
+          asset_path: native-compiler-linux-glibc-arm64/bflat-compiler-native-linux-glibc-arm64.zip
           asset_name: bflat-compiler-native-linux-glibc-arm64.zip
           asset_content_type: application/zip
 
@@ -268,7 +268,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: libs/bflat-libs-windows-arm64.zip
+          asset_path: libs-windows-arm64/bflat-libs-windows-arm64.zip
           asset_name: bflat-libs-windows-arm64.zip
           asset_content_type: application/zip
 
@@ -278,7 +278,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: libs/bflat-libs-linux-glibc-arm64.zip
+          asset_path: libs-linux-glibc-arm64/bflat-libs-linux-glibc-arm64.zip
           asset_name: bflat-libs-linux-glibc-arm64.zip
           asset_content_type: application/zip
 
@@ -288,6 +288,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: libs/bflat-libs-linux-bionic-arm64.zip
+          asset_path: libs-linux-bionic-arm64/bflat-libs-linux-bionic-arm64.zip
           asset_name: bflat-libs-linux-bionic-arm64.zip
           asset_content_type: application/zip
