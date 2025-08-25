@@ -1351,7 +1351,7 @@ namespace Internal.IL
 
         private void ImportConvert(WellKnownType wellKnownType, bool checkOverflow, bool unsigned)
         {
-            if (checkOverflow)
+            if (checkOverflow && !SettingsTunnel.ZerolibLike)
             {
                 _dependencies.Add(GetHelperEntrypoint(ReadyToRunHelper.Dbl2IntOvf), "_dbl2intovf");
                 _dependencies.Add(GetHelperEntrypoint(ReadyToRunHelper.Dbl2UIntOvf), "_dbl2uintovf");

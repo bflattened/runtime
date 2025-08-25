@@ -28,6 +28,7 @@ endif()
 # a variety of toolchain versions, not only the exact one we built with.
 add_library(aotminipal STATIC ${SOURCES})
 set_target_properties(aotminipal PROPERTIES INTERPROCEDURAL_OPTIMIZATION OFF)
+set_target_properties(aotminipal PROPERTIES CLR_CONTROL_FLOW_GUARD OFF)
 
 if (WIN32)
     target_link_libraries(aotminipal PUBLIC bcrypt)

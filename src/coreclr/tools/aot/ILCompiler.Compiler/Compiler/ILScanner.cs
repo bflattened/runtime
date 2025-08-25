@@ -138,6 +138,8 @@ namespace ILCompiler
 
         ILScanResults IILScanner.Scan()
         {
+            if (!SettingsTunnel.ZerolibLike)
+            {
             _dependencyGraph.AddRoot(GetHelperEntrypoint(ReadyToRunHelper.BulkWriteBarrier), "Not tracked by scanner");
             _dependencyGraph.AddRoot(GetHelperEntrypoint(ReadyToRunHelper.MemCpy), "Not tracked by scanner");
             _dependencyGraph.AddRoot(GetHelperEntrypoint(ReadyToRunHelper.MemSet), "Not tracked by scanner");
@@ -151,6 +153,7 @@ namespace ILCompiler
             _dependencyGraph.AddRoot(GetHelperEntrypoint(ReadyToRunHelper.CheckInstanceClass), "Not tracked by scanner");
             _dependencyGraph.AddRoot(GetHelperEntrypoint(ReadyToRunHelper.IsInstanceOfException), "Not tracked by scanner");
             _dependencyGraph.AddRoot(_nodeFactory.MethodEntrypoint(_nodeFactory.TypeSystemContext.GetHelperEntryPoint("ThrowHelpers", "ThrowFeatureBodyRemoved")), "Substitution for methods removed based on scanning");
+            }
 
             _dependencyGraph.ComputeMarkedNodes();
 
@@ -292,7 +295,7 @@ namespace ILCompiler
                 }
             }
 
-            if (!hasIDynamicInterfaceCastableType)
+            if (!hasIDynamicInterfaceCastableType && !SettingsTunnel.ZerolibLike)
             {
                 // We can't easily trim out some of the IDynamicInterfaceCastable infrastructure because
                 // the callers do type checks based on flags on the MethodTable instead of an actual type cast.

@@ -15,7 +15,7 @@ function(install_bootstrapper_object targetName destination)
   endif()
 endfunction()
 
-if (CLR_CMAKE_HOST_ARCH_ARM64 OR CLR_CMAKE_HOST_ARCH_X86)
+if (CLR_CMAKE_HOST_ARCH_ARM64 OR CLR_CMAKE_HOST_ARCH_I386)
   set(SOURCES ${ARCH_SOURCES_DIR}/stubs.${ASM_SUFFIX})
 
   convert_to_absolute_path(SOURCES ${SOURCES})

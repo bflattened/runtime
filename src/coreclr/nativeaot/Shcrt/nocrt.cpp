@@ -11,23 +11,23 @@ namespace std {
 const std::nothrow_t nothrow = std::nothrow_t(); // define nothrow
 }
 
-void* operator new[](size_t const size, std::nothrow_t const& x) noexcept
+void* __CRTDECL operator new[](size_t const size, std::nothrow_t const& x) noexcept
 {
     return malloc(size);
 }
 
-void* operator new(size_t const size, std::nothrow_t const& x) noexcept
+void* __CRTDECL operator new(size_t const size, std::nothrow_t const& x) noexcept
 {
     return malloc(size);
 }
 
-void operator delete[](void* const block) noexcept
+void __CRTDECL operator delete[](void* const block) noexcept
 {
     free(block);
 }
 
 
-void operator delete(void* const block, size_t const) noexcept
+void __CRTDECL operator delete(void* const block, size_t const) noexcept
 {
     free(block);
 }
@@ -401,7 +401,7 @@ __cdecl atexit(_PVFV Func)
 }
 
 #pragma function(memset)
-extern "C" void  *memset(void *Dest, int Value, size_t Size)
+extern "C" void* __cdecl memset(void *Dest, int Value, size_t Size)
 {
     unsigned char Val = *(unsigned char*)&Value;
     unsigned char *At = (unsigned char*)Dest;
@@ -414,7 +414,7 @@ extern "C" void  *memset(void *Dest, int Value, size_t Size)
 }
 
 #pragma function(memcpy)
-extern "C" void *memcpy(void *Dest, const void *Source, size_t Size)
+extern "C" void* __cdecl memcpy(void *Dest, const void *Source, size_t Size)
 {
     char *D = (char*)Dest;
     const char *S = (char*)Source;
@@ -427,7 +427,7 @@ extern "C" void *memcpy(void *Dest, const void *Source, size_t Size)
 }
 
 #pragma function(memcmp)
-extern "C" int memcmp(const void *A, const void *B, size_t Count)
+extern "C" int __cdecl memcmp(const void *A, const void *B, size_t Count)
 {
     register const unsigned char *s1 = (const unsigned char*)A;
     register const unsigned char *s2 = (const unsigned char*)B;
@@ -444,7 +444,7 @@ extern "C" int memcmp(const void *A, const void *B, size_t Count)
 }
 
 #pragma function(memmove)
-extern "C" void* memmove(void *dest, void const *src, size_t len)
+extern "C" void* __cdecl memmove(void *dest, void const *src, size_t len)
 {
     size_t i;
     char *char_src = (char*)src;
