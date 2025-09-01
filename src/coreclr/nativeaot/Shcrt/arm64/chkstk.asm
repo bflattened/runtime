@@ -2,7 +2,7 @@
 
 TEXTAREA
 
-    LEAF_ENTRY chkstk, _TEXT
+    LEAF_ENTRY __chkstk, _TEXT
 
     ldr         xip1,[xpr,#0x10]
     subs        xip0,sp,x15,lsl #4
@@ -19,6 +19,6 @@ LOC1
     bne         LOC1
     ret
 
-    LEAF_END chkstk
+    LEAF_END __chkstk
 
 END
