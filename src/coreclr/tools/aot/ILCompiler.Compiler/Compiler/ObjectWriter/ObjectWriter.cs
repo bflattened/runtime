@@ -464,7 +464,7 @@ namespace ILCompiler.ObjectWriter
                 }
 
                 // Emit unwinding frames and LSDA
-                if (node is INodeWithCodeInfo nodeWithCodeInfo)
+                if (node is INodeWithCodeInfo nodeWithCodeInfo && SettingsTunnel.EmitUnwindInfo)
                 {
                     EmitUnwindInfo(sectionWriter, nodeWithCodeInfo, currentSymbolName);
                 }
